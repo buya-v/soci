@@ -1,8 +1,9 @@
-import { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 
 interface Props {
   children: ReactNode;
+  fallbackTitle?: string;
 }
 
 interface State {
@@ -10,7 +11,7 @@ interface State {
   error: Error | null;
 }
 
-export class RootErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
@@ -21,39 +22,37 @@ export class RootErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo);
-    // In production, log to Sentry/Datadog here
+    console.error("[SOCI-ERR] Uncaught error:", error, errorInfo);
   }
 
-  private handleReload = () => {
+  private handleReset = () => {
+    this.setState({ hasError: false, error: null });
     window.location.reload();
   };
 
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-primary flex items-center justify-center p-4">
-          <div className="glass-panel p-8 max-w-md w-full rounded-2xl border-l-4 border-red-500 flex flex-col items-center text-center">
-            <div className="h-16 w-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
-              <AlertTriangle className="w-8 h-8 text-red-500" />
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-2">System Integrity Interrupted</h1>
-            <p className="text-slate-400 mb-6">
-              The autonomous engine encountered an unexpected anomaly. Safety protocols have been engaged.
-            </p>
-            <div className="bg-black/30 p-4 rounded-lg w-full text-left mb-6 overflow-hidden">
-              <code className="text-xs text-red-400 font-mono">
-                Error: {this.state.error?.message || 'Unknown Exception'}
-              </code>
-            </div>
-            <button
-              onClick={this.handleReload}
-              className="flex items-center gap-2 px-6 py-3 bg-accent-primary hover:bg-indigo-600 text-white rounded-xl transition-all font-medium"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Reboot Module
-            </button>
+        <div className="min-h-[300px] w-full flex flex-col items-center justify-center p-8 bg-deep/50 border border-critical/30 rounded-xl backdrop-blur-md">
+          <AlertTriangle className="w-12 h-12 text-critical mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">
+            {this.props.fallbackTitle || "System Boundary Triggered"}
+          </h2>
+          <p className="text-gray-400 text-center max-w-md mb-6">
+            Our resilience protocols caught an anomaly. The application state has been preserved to prevent a crash.
+          </p>
+          <div className="p-3 bg-black/40 rounded-md border border-white/5 mb-6 w-full max-w-sm overflow-hidden">
+            <code className="text-xs text-critical font-mono break-all">
+              {this.state.error?.message || "Unknown Error"}
+            </code>
           </div>
+          <button
+            onClick={this.handleReset}
+            className="flex items-center gap-2 px-6 py-2 bg-critical/10 hover:bg-critical/20 text-critical border border-critical/50 rounded-lg transition-all duration-300"
+          >
+            <RefreshCw size={16} />
+            Graceful Reset
+          </button>
         </div>
       );
     }

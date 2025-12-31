@@ -6,28 +6,25 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      },
       colors: {
-        primary: '#0A0A0C', // Deep Obsidian
-        glass: 'rgba(255, 255, 255, 0.03)',
-        accent: {
-          primary: '#6366F1', // Indigo Neon
-          secondary: '#EC4899', // Pink Flare
-        },
-        surface: {
-          100: '#1A1A1E',
-          200: '#25252A'
+        deep: '#050508',
+        neon: '#00FFC2',
+        purpleAccent: '#9D50BB',
+        critical: '#FF4B2B',
+        glass: {
+          bg: 'rgba(20, 20, 30, 0.6)',
+          border: 'rgba(255, 255, 255, 0.08)',
         }
       },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['SF Pro Display', 'Inter', 'sans-serif'],
-      },
       boxShadow: {
-        'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
-        'glow': '0 0 20px rgba(99, 102, 241, 0.15)',
+        'glow-soft': '0 0 20px rgba(0, 255, 194, 0.15)',
+        'glow-strong': '0 0 30px rgba(0, 255, 194, 0.25)',
       },
       animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       }
     },
   },
