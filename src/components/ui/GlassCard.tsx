@@ -1,37 +1,22 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { clsx, type ClassValue } from 'clsx';
-import { tailwindMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return tailwindMerge(clsx(inputs));
-}
+import { ReactNode } from 'react';
+import { cn } from '../../utils/cn';
 
 interface GlassCardProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
-  hoverEffect?: boolean;
-  delay?: number;
+  interactive?: boolean;
 }
 
-export const GlassCard: React.FC<GlassCardProps> = ({ 
-  children, 
-  className, 
-  hoverEffect = false, 
-  delay = 0 
-}) => {
+export const GlassCard = ({ children, className, interactive = false }: GlassCardProps) => {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay, ease: "easeOut" }}
+    <div
       className={cn(
-        "glass-panel rounded-xl p-6 transition-all duration-300",
-        hoverEffect && "hover:bg-slate-800/50 hover:border-indigo-500/30",
+        'glass-panel rounded-2xl p-6 transition-all duration-300',
+        interactive && 'hover:bg-white/5 hover:border-white/20 hover:-translate-y-1 cursor-pointer',
         className
       )}
     >
       {children}
-    </motion.div>
+    </div>
   );
 };
