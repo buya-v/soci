@@ -1,31 +1,45 @@
-export type LogLevel = 'info' | 'success' | 'warning' | 'error';
+import { z } from 'zod';
 
-export interface ActivityLog {
+// Zod Schemas for defensive validation
+export const TrendSchema = z.object({
+  id: z.string(),
+  topic: z.string(),
+  volume: z.string(),
+  confidence: z.number().min(0).max(100),
+  category: z.string(),
+  hashtags: z.array(z.string())
+});
+
+export const PostSchema = z.object({
+  id: z.string(),
+  content: z.string(),
+  platform: z.enum(['twitter', 'linkedin', 'instagram']),
+  status: z.enum(['draft', 'scheduled', 'published']),
+  timestamp: z.string(),
+  predictedEngagement: z.string()
+});
+
+export type Trend = z.infer<typeof TrendSchema>;
+export type Post = z.infer<typeof PostSchema>;
+
+export interface NavItem {
   id: string;
-  timestamp: Date;
-  message: string;
-  type: LogLevel;
+  label: string;
+  icon: React.ElementType;
 }
 
-export interface Trend {
-  id: string;
-  topic: string;
-  volume: string;
-  sociScore: number;
-  category: string;
-}
-
-export interface GeneratedPost {
-  id: string;
-  content: string;
-  trendId: string;
-  platform: 'twitter' | 'linkedin';
-  status: 'draft' | 'scheduled' | 'published';
-}
-
-export interface Persona {
-  tone: string;
-  niche: string;
-  forbiddenKeywords: string[];
-  targetAudience: string;
+export interface UserState {
+  user: {
+    name: string;
+    role: string;
+    avatar: string;
+  };
+  trends: Trend[];
+  posts: Post[];
+  isLoading: boolean;
+  activeView: 'dashboard' | 'trends' | 'composer' | 'settings';
+  setActiveView: (view: 'dashboard' | 'trends' | 'composer' | 'settings') => void;
+  generatePost: (trend: Trend) => void;
+  addPost: (post: Post) => void;
+  refreshTrends: () => Promise<void>;
 }
