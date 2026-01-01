@@ -1,68 +1,145 @@
-import React from 'react';
-import { LayoutDashboard, TrendingUp, PenTool, Settings, Activity } from 'lucide-react';
-import { useSociStore } from '../../store/useSociStore';
 import { motion } from 'framer-motion';
+import type { LucideIcon } from 'lucide-react';
+import {
+  LayoutDashboard,
+  TrendingUp,
+  PenTool,
+  FileText,
+  Calendar,
+  Video,
+  Settings,
+  Zap,
+  Keyboard,
+  BookTemplate,
+  Hash,
+  Image,
+} from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { NotificationBell } from '@/components/ui/NotificationCenter';
+import type { ViewType } from '@/types';
 
-export const Sidebar: React.FC = () => {
-  const { activeView, setActiveView } = useSociStore();
+interface SidebarProps {
+  activeView: ViewType;
+  onViewChange: (view: ViewType) => void;
+  onShowShortcuts?: () => void;
+  onShowNotifications?: () => void;
+}
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'trends', label: 'Trend Radar', icon: TrendingUp },
-    { id: 'composer', label: 'Content Lab', icon: PenTool },
-    { id: 'settings', label: 'Configuration', icon: Settings },
-  ];
+interface NavItem {
+  id: ViewType;
+  label: string;
+  icon: LucideIcon;
+}
 
+const navItems: NavItem[] = [
+  { id: 'dashboard', label: 'Growth Hub', icon: LayoutDashboard },
+  { id: 'trends', label: 'Trend Radar', icon: TrendingUp },
+  { id: 'content', label: 'Content Lab', icon: PenTool },
+  { id: 'templates', label: 'Templates', icon: BookTemplate },
+  { id: 'hashtags', label: 'Hashtags', icon: Hash },
+  { id: 'media', label: 'Media Library', icon: Image },
+  { id: 'drafts', label: 'Queue', icon: FileText },
+  { id: 'calendar', label: 'Calendar', icon: Calendar },
+  { id: 'video', label: 'Video Lab', icon: Video },
+  { id: 'automation', label: 'Automation', icon: Settings },
+];
+
+export function Sidebar({ activeView, onViewChange, onShowShortcuts, onShowNotifications }: SidebarProps) {
   return (
-    <motion.aside 
-      initial={{ x: -50, opacity: 0 }}
+    <motion.aside
+      initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      className="w-64 border-r border-slate-800 bg-slate-950/50 backdrop-blur-xl h-screen flex flex-col"
+      transition={{ duration: 0.3 }}
+      className="fixed left-0 top-0 h-screen w-64 glass-panel border-r border-glass-border flex flex-col z-50"
     >
-      <div className="p-6 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
-          <Activity className="w-5 h-5 text-white" />
+      {/* Logo Section */}
+      <div className="p-5 border-b border-glass-border">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg gradient-bg flex items-center justify-center shadow-glow-primary">
+            <Zap size={20} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold gradient-text">SOCI</h1>
+            <p className="text-xs text-gray-500">AI Growth Engine</p>
+          </div>
         </div>
-        <span className="font-bold text-xl tracking-tight text-white">Soci<span className="text-indigo-500">.ai</span></span>
       </div>
 
-      <nav className="flex-1 px-4 space-y-2 mt-4">
-        {menuItems.map((item) => {
-          const isActive = activeView === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveView(item.id as any)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200 relative group ${
-                isActive 
-                  ? 'text-white bg-indigo-500/10 border border-indigo-500/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <item.icon className={`w-5 h-5 ${isActive ? 'text-indigo-400' : 'group-hover:text-white'}`} />
-              {item.label}
-              {isActive && (
-                <motion.div
-                  layoutId="activeGlow"
-                  className="absolute inset-0 rounded-lg bg-indigo-500/5"
-                  initial={false}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-            </button>
-          );
-        })}
+      {/* Navigation Items */}
+      <nav className="flex-1 p-3 overflow-y-auto">
+        <ul className="space-y-1">
+          {navItems.map((item) => {
+            const isActive = activeView === item.id;
+            const Icon = item.icon;
+            return (
+              <li key={item.id}>
+                <button
+                  onClick={() => onViewChange(item.id)}
+                  className={`
+                    w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
+                    transition-all duration-200 text-left relative
+                    ${isActive
+                      ? 'bg-primary/15 text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }
+                  `}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeNavBg"
+                      className="absolute inset-0 rounded-lg bg-primary/10 border border-primary/20"
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    />
+                  )}
+                  <span className={`relative z-10 ${isActive ? 'text-primary-light' : ''}`}>
+                    <Icon size={18} />
+                  </span>
+                  <span className="relative z-10 text-sm font-medium">{item.label}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </nav>
 
-      <div className="p-4">
-        <div className="glass-panel p-4 rounded-xl">
-          <p className="text-xs text-slate-400 mb-2">System Status</p>
+      {/* Status Section */}
+      <div className="p-3 border-t border-glass-border space-y-3">
+        {/* Theme & Notifications */}
+        <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs font-mono text-green-400">ONLINE: v1.1.0</span>
+            <span className="text-xs text-gray-500">Theme</span>
+            <ThemeToggle variant="compact" />
           </div>
+          {onShowNotifications && (
+            <NotificationBell onClick={onShowNotifications} />
+          )}
+        </div>
+
+        {/* Keyboard Shortcuts Button */}
+        {onShowShortcuts && (
+          <button
+            onClick={onShowShortcuts}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-gray-400 hover:text-white"
+          >
+            <div className="flex items-center gap-2">
+              <Keyboard size={14} />
+              <span className="text-xs">Shortcuts</span>
+            </div>
+            <kbd className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded font-mono">/</kbd>
+          </button>
+        )}
+
+        {/* Status Badge */}
+        <div className="bg-white/5 rounded-lg p-3 border border-glass-border">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
+            <span className="text-xs font-medium text-success">Engine Online</span>
+          </div>
+          <p className="text-[10px] text-gray-500">
+            v2.0 Autonomous Core Active
+          </p>
         </div>
       </div>
     </motion.aside>
   );
-};
+}
