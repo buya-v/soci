@@ -46,7 +46,7 @@ import {
   initOpenAIClient,
   type ContentVariation,
 } from '@/services/ai';
-import { predictEngagement, suggestHashtags, getNextOptimalTime, getPlatformTips, type EngagementPrediction } from '@/services/predictions';
+import { predictEngagement, suggestHashtags, getNextOptimalTime, getPlatformTips, getContentIdeas, type EngagementPrediction } from '@/services/predictions';
 import { PerformancePrediction } from './PerformancePrediction';
 import { TemplateVariableModal } from './TemplateVariableModal';
 import { PreflightCheckModal } from './PreflightCheckModal';
@@ -415,6 +415,7 @@ export function ContentLab() {
   const [showHashtagsPicker, setShowHashtagsPicker] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<ContentTemplate | null>(null);
   const [showPreflightCheck, setShowPreflightCheck] = useState(false);
+  const [ideasKey, setIdeasKey] = useState(0); // For refreshing content ideas
 
   // Undo/redo for caption editing
   const {
@@ -876,6 +877,53 @@ export function ContentLab() {
           <AlertCircle className="text-critical shrink-0" size={20} />
           <p className="text-sm text-critical">{error}</p>
         </motion.div>
+      )}
+
+      {/* Content Ideas Section */}
+      {!generatedPost && (
+        <GlassCard className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-300 flex items-center gap-2">
+              <Sparkles size={16} className="text-primary" />
+              Content Ideas for {platform.charAt(0).toUpperCase() + platform.slice(1)}
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIdeasKey(k => k + 1)}
+              className="text-xs"
+            >
+              <RefreshCw size={12} className="mr-1" />
+              Refresh
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" key={ideasKey}>
+            {getContentIdeas(platform, 3).map((idea, i) => (
+              <button
+                key={i}
+                onClick={() => setTopic(idea.title)}
+                className="p-3 bg-white/5 hover:bg-white/10 border border-glass-border hover:border-primary/30 rounded-xl text-left transition-all group"
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                    idea.engagement === 'high'
+                      ? 'bg-success/10 text-success'
+                      : 'bg-primary/10 text-primary'
+                  }`}>
+                    {idea.engagement === 'high' ? 'High Engagement' : 'Good Engagement'}
+                  </span>
+                  <span className="text-[10px] text-gray-500 capitalize">{idea.format}</span>
+                </div>
+                <p className="text-sm font-medium text-white group-hover:text-primary transition-colors">
+                  {idea.title}
+                </p>
+                <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                  {idea.description}
+                </p>
+              </button>
+            ))}
+          </div>
+        </GlassCard>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

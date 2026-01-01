@@ -625,3 +625,55 @@ export function getPlatformTips(platform: Platform): ContentTip[] {
 
   return tips[platform];
 }
+
+// Content ideas/inspiration by platform and niche
+export interface ContentIdea {
+  title: string;
+  description: string;
+  format: 'post' | 'story' | 'reel' | 'thread' | 'carousel';
+  engagement: 'high' | 'medium';
+}
+
+const contentIdeasByPlatform: Record<Platform, ContentIdea[]> = {
+  instagram: [
+    { title: 'Behind the Scenes', description: 'Show your process, workspace, or daily routine', format: 'story', engagement: 'high' },
+    { title: 'Before & After', description: 'Transformation content performs extremely well', format: 'carousel', engagement: 'high' },
+    { title: 'Quick Tips Carousel', description: '5-7 actionable tips in a swipeable format', format: 'carousel', engagement: 'high' },
+    { title: 'Day in My Life', description: 'Relatable content showing your routine', format: 'reel', engagement: 'medium' },
+    { title: 'User-Generated Content', description: 'Repost and celebrate your community', format: 'post', engagement: 'medium' },
+    { title: 'Mini Tutorial', description: '30-60 second how-to video', format: 'reel', engagement: 'high' },
+  ],
+  twitter: [
+    { title: 'Hot Take Thread', description: 'Share a controversial but informed opinion', format: 'thread', engagement: 'high' },
+    { title: 'Lessons Learned', description: 'X things I learned from [experience]', format: 'thread', engagement: 'high' },
+    { title: 'Quick Win Tip', description: 'One actionable piece of advice', format: 'post', engagement: 'medium' },
+    { title: 'Industry News Commentary', description: 'React to trending news in your niche', format: 'post', engagement: 'high' },
+    { title: 'Poll Your Audience', description: 'Ask an engaging either/or question', format: 'post', engagement: 'medium' },
+    { title: 'Myth Busting', description: 'Debunk a common misconception', format: 'thread', engagement: 'high' },
+  ],
+  linkedin: [
+    { title: 'Career Story', description: 'Share a pivotal moment in your journey', format: 'post', engagement: 'high' },
+    { title: 'Industry Insight', description: 'Analysis of a trend affecting your field', format: 'post', engagement: 'high' },
+    { title: 'Failure to Success', description: 'What you learned from a setback', format: 'post', engagement: 'high' },
+    { title: 'Tool Recommendation', description: 'Share a tool that changed your workflow', format: 'carousel', engagement: 'medium' },
+    { title: 'Hiring/Team Win', description: 'Celebrate your team achievements', format: 'post', engagement: 'medium' },
+    { title: 'Contrarian Take', description: 'Challenge conventional industry wisdom', format: 'post', engagement: 'high' },
+  ],
+  tiktok: [
+    { title: 'Trending Sound Remix', description: 'Put your spin on a viral audio', format: 'reel', engagement: 'high' },
+    { title: 'POV Content', description: 'First-person perspective storytelling', format: 'reel', engagement: 'high' },
+    { title: 'Get Ready With Me', description: 'Routine content with voiceover', format: 'reel', engagement: 'medium' },
+    { title: 'Stitch/Duet Response', description: 'React to trending content in your niche', format: 'reel', engagement: 'high' },
+    { title: 'Quick Tutorial', description: '15-30 second how-to with text overlay', format: 'reel', engagement: 'high' },
+    { title: 'Story Time', description: 'Share an interesting personal story', format: 'reel', engagement: 'medium' },
+  ],
+};
+
+export function getContentIdeas(platform: Platform, count: number = 3): ContentIdea[] {
+  const ideas = contentIdeasByPlatform[platform];
+  // Shuffle and return requested count, prioritizing high engagement
+  const shuffled = [...ideas].sort(() => Math.random() - 0.5);
+  const highEngagement = shuffled.filter(i => i.engagement === 'high');
+  const mediumEngagement = shuffled.filter(i => i.engagement === 'medium');
+  return [...highEngagement, ...mediumEngagement].slice(0, count);
+}
