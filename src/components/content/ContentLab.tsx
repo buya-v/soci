@@ -1153,6 +1153,64 @@ export function ContentLab() {
             </div>
           </GlassCard>
 
+          {/* Content Quality Checklist */}
+          {generatedPost && (
+            <GlassCard className="p-4">
+              <h4 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+                <Check size={16} className="text-success" />
+                Content Checklist
+              </h4>
+              <div className="space-y-2">
+                {(() => {
+                  const checks = [
+                    {
+                      label: 'Caption length',
+                      passed: generatedPost.caption.length <= platformCharLimits[platform].caption,
+                      detail: generatedPost.caption.length <= platformCharLimits[platform].caption
+                        ? `${generatedPost.caption.length}/${platformCharLimits[platform].caption}`
+                        : `Over by ${generatedPost.caption.length - platformCharLimits[platform].caption}`,
+                    },
+                    {
+                      label: 'Hashtags',
+                      passed: generatedPost.hashtags.length >= 1 && generatedPost.hashtags.length <= platformCharLimits[platform].hashtags,
+                      detail: `${generatedPost.hashtags.length}/${platformCharLimits[platform].hashtags}`,
+                    },
+                    {
+                      label: 'Has hook',
+                      passed: generatedPost.caption.length > 0 && (
+                        generatedPost.caption.includes('?') ||
+                        generatedPost.caption.includes('!') ||
+                        /^[A-Z]/.test(generatedPost.caption)
+                      ),
+                      detail: generatedPost.caption.includes('?') ? 'Question hook' : generatedPost.caption.includes('!') ? 'Exclamation hook' : 'Statement',
+                    },
+                    {
+                      label: 'Media attached',
+                      passed: !!generatedPost.imageUrl,
+                      detail: generatedPost.imageUrl ? 'Image ready' : 'No image',
+                    },
+                  ];
+
+                  return checks.map((check, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {check.passed ? (
+                          <Check size={14} className="text-success" />
+                        ) : (
+                          <AlertCircle size={14} className="text-warning" />
+                        )}
+                        <span className="text-xs text-gray-400">{check.label}</span>
+                      </div>
+                      <span className={`text-xs ${check.passed ? 'text-gray-500' : 'text-warning'}`}>
+                        {check.detail}
+                      </span>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </GlassCard>
+          )}
+
           {/* Action Buttons */}
           <div className="flex gap-3">
             <Button
