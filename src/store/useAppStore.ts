@@ -107,6 +107,26 @@ interface AppState {
   addMediaFolder: (folder: MediaFolder) => void;
   updateMediaFolder: (id: string, updates: Partial<MediaFolder>) => void;
   deleteMediaFolder: (id: string) => void;
+
+  // Draft Auto-save
+  draftInProgress: DraftInProgress | null;
+  saveDraftInProgress: (draft: DraftInProgress) => void;
+  clearDraftInProgress: () => void;
+
+  // Recently Used
+  recentlyUsedTemplates: string[]; // Template IDs
+  recentlyUsedHashtagCollections: string[]; // Collection IDs
+  addRecentlyUsedTemplate: (id: string) => void;
+  addRecentlyUsedHashtagCollection: (id: string) => void;
+}
+
+interface DraftInProgress {
+  caption: string;
+  hashtags: string[];
+  platform: string;
+  topic: string;
+  imageUrl?: string;
+  savedAt: string;
 }
 
 interface Notification {
@@ -357,6 +377,29 @@ export const useAppStore = create<AppState>()(
             m.folderId === id ? { ...m, folderId: undefined } : m
           ),
         })),
+
+      // Draft Auto-save
+      draftInProgress: null,
+      saveDraftInProgress: (draft) => set({ draftInProgress: draft }),
+      clearDraftInProgress: () => set({ draftInProgress: null }),
+
+      // Recently Used
+      recentlyUsedTemplates: [],
+      recentlyUsedHashtagCollections: [],
+      addRecentlyUsedTemplate: (id) =>
+        set((state) => ({
+          recentlyUsedTemplates: [
+            id,
+            ...state.recentlyUsedTemplates.filter((t) => t !== id),
+          ].slice(0, 5), // Keep last 5
+        })),
+      addRecentlyUsedHashtagCollection: (id) =>
+        set((state) => ({
+          recentlyUsedHashtagCollections: [
+            id,
+            ...state.recentlyUsedHashtagCollections.filter((c) => c !== id),
+          ].slice(0, 5), // Keep last 5
+        })),
     }),
     {
       name: 'soci-storage-v2',
@@ -372,6 +415,9 @@ export const useAppStore = create<AppState>()(
         hashtagCollections: state.hashtagCollections,
         mediaItems: state.mediaItems,
         mediaFolders: state.mediaFolders,
+        draftInProgress: state.draftInProgress,
+        recentlyUsedTemplates: state.recentlyUsedTemplates,
+        recentlyUsedHashtagCollections: state.recentlyUsedHashtagCollections,
       }),
     }
   )

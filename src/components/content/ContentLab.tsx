@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -393,6 +393,13 @@ export function ContentLab() {
     hashtagCollections,
     incrementTemplateUsage,
     incrementHashtagCollectionUsage,
+    draftInProgress,
+    saveDraftInProgress,
+    clearDraftInProgress,
+    recentlyUsedTemplates,
+    recentlyUsedHashtagCollections,
+    addRecentlyUsedTemplate,
+    addRecentlyUsedHashtagCollection,
   } = useAppStore();
   const [topic, setTopic] = useState('');
   const [tone, setTone] = useState<Persona['tone']>('professional');
@@ -416,6 +423,8 @@ export function ContentLab() {
   const [pendingTemplate, setPendingTemplate] = useState<ContentTemplate | null>(null);
   const [showPreflightCheck, setShowPreflightCheck] = useState(false);
   const [ideasKey, setIdeasKey] = useState(0); // For refreshing content ideas
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Undo/redo for caption editing
   const {
@@ -480,6 +489,76 @@ export function ContentLab() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isEditingCaption, canUndo, canRedo, handleUndo, handleRedo]);
+
+  // Check for saved draft on mount
+  useEffect(() => {
+    if (draftInProgress && !generatedPost) {
+      setShowRestoreBanner(true);
+    }
+  }, []);
+
+  // Auto-save draft in progress (debounced)
+  useEffect(() => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    if (generatedPost && (generatedPost.caption || generatedPost.hashtags.length > 0)) {
+      autoSaveTimerRef.current = setTimeout(() => {
+        saveDraftInProgress({
+          caption: generatedPost.caption,
+          hashtags: generatedPost.hashtags,
+          platform,
+          topic,
+          imageUrl: generatedPost.imageUrl,
+          savedAt: new Date().toISOString(),
+        });
+      }, 2000); // Auto-save after 2 seconds of inactivity
+    }
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [generatedPost, platform, topic, saveDraftInProgress]);
+
+  // Restore saved draft
+  const handleRestoreDraft = useCallback(() => {
+    if (draftInProgress) {
+      setTopic(draftInProgress.topic);
+      setPlatform(draftInProgress.platform as Platform);
+      setGeneratedPost({
+        caption: draftInProgress.caption,
+        hashtags: draftInProgress.hashtags,
+        imageUrl: draftInProgress.imageUrl,
+      });
+      resetCaptionHistory(draftInProgress.caption);
+      setShowRestoreBanner(false);
+      addNotification({
+        type: 'success',
+        title: 'Draft Restored',
+        message: 'Your previous work has been restored',
+      });
+    }
+  }, [draftInProgress, resetCaptionHistory, addNotification]);
+
+  // Dismiss saved draft
+  const handleDismissDraft = useCallback(() => {
+    clearDraftInProgress();
+    setShowRestoreBanner(false);
+  }, [clearDraftInProgress]);
+
+  // Get recently used templates and hashtag collections
+  const recentTemplates = recentlyUsedTemplates
+    .map(id => templates.find(t => t.id === id))
+    .filter((t): t is ContentTemplate => t !== undefined)
+    .slice(0, 3);
+
+  const recentHashtagCollections = recentlyUsedHashtagCollections
+    .map(id => hashtagCollections.find(c => c.id === id))
+    .filter((c): c is HashtagCollection => c !== undefined)
+    .slice(0, 3);
 
   // Update predictions when content changes
   useEffect(() => {
@@ -567,6 +646,7 @@ export function ContentLab() {
     });
     resetCaptionHistory(content);
     incrementTemplateUsage(template.id);
+    addRecentlyUsedTemplate(template.id);
     addNotification({
       type: 'success',
       title: 'Template Applied',
@@ -598,6 +678,7 @@ export function ContentLab() {
       resetCaptionHistory('');
     }
     incrementHashtagCollectionUsage(collection.id);
+    addRecentlyUsedHashtagCollection(collection.id);
     setShowHashtagsPicker(false);
     addNotification({
       type: 'success',
@@ -808,6 +889,7 @@ export function ContentLab() {
       imageUrl: generatedPost.imageUrl,
     });
     setShowPreflightCheck(false);
+    clearDraftInProgress(); // Clear auto-saved draft after saving
     addNotification({
       type: 'success',
       title: 'Post Saved',
@@ -843,6 +925,70 @@ export function ContentLab() {
           </div>
         </div>
       </div>
+
+      {/* Restore Draft Banner */}
+      <AnimatePresence>
+        {showRestoreBanner && draftInProgress && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-4 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Clock size={18} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">Unsaved draft found</p>
+                <p className="text-xs text-gray-400">
+                  Last edited {new Date(draftInProgress.savedAt).toLocaleString()} for {draftInProgress.platform}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={handleDismissDraft}>
+                Dismiss
+              </Button>
+              <Button variant="primary" size="sm" onClick={handleRestoreDraft}>
+                Restore
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Recently Used */}
+      {(recentTemplates.length > 0 || recentHashtagCollections.length > 0) && !generatedPost && (
+        <GlassCard className="p-4">
+          <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+            <Clock size={14} className="text-gray-500" />
+            Recently Used
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {recentTemplates.map((template) => (
+              <button
+                key={template.id}
+                onClick={() => handleApplyTemplate(template)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-primary/10 border border-glass-border hover:border-primary/30 rounded-lg transition-colors group"
+              >
+                <BookTemplate size={12} className="text-accent-purple" />
+                <span className="text-xs text-gray-300 group-hover:text-white">{template.name}</span>
+              </button>
+            ))}
+            {recentHashtagCollections.map((collection) => (
+              <button
+                key={collection.id}
+                onClick={() => handleApplyHashtagCollection(collection)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-success/10 border border-glass-border hover:border-success/30 rounded-lg transition-colors group"
+              >
+                <Hash size={12} className="text-success" />
+                <span className="text-xs text-gray-300 group-hover:text-white">{collection.name}</span>
+              </button>
+            ))}
+          </div>
+        </GlassCard>
+      )}
 
       {/* API Key Warning */}
       {(!anthropicReady || !openaiReady) && (
