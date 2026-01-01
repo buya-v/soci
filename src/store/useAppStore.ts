@@ -13,6 +13,11 @@ import type {
   HashtagCollection,
   MediaItem,
   MediaFolder,
+  BudgetConfig,
+  BudgetSpend,
+  BudgetCategory,
+  Language,
+  Platform,
 } from '@/types';
 
 export interface ApiKeys {
@@ -118,6 +123,26 @@ interface AppState {
   recentlyUsedHashtagCollections: string[]; // Collection IDs
   addRecentlyUsedTemplate: (id: string) => void;
   addRecentlyUsedHashtagCollection: (id: string) => void;
+
+  // Emergency Stop
+  isAutonomousModeActive: boolean;
+  emergencyStopTriggeredAt: string | null;
+  triggerEmergencyStop: () => void;
+  resumeAutonomousMode: () => void;
+
+  // Budget Management
+  budgetConfig: BudgetConfig;
+  budgetSpends: BudgetSpend[];
+  setBudgetConfig: (config: Partial<BudgetConfig>) => void;
+  setMonthlyBudget: (amount: number) => void;
+  updateAllocation: (category: BudgetCategory, percentage: number) => void;
+  addBudgetSpend: (spend: BudgetSpend) => void;
+  deleteBudgetSpend: (id: string) => void;
+  optimizeBudget: (mode: BudgetConfig['optimizationMode']) => void;
+
+  // Language Settings
+  setDefaultLanguage: (language: Language) => void;
+  setPlatformLanguage: (platform: Platform, language: Language | null) => void;
 }
 
 interface DraftInProgress {
@@ -157,6 +182,8 @@ const defaultPersona: Persona = {
   topics: ['AI', 'startups', 'productivity', 'innovation'],
   maxDailyPosts: 5,
   isActive: true,
+  defaultLanguage: 'en',
+  platformLanguages: {},
 };
 
 const defaultAutomationSettings: AutomationSettings = {
@@ -176,6 +203,62 @@ const defaultPlatformCredentials: PlatformCredential[] = [
 const defaultApiKeys: ApiKeys = {
   anthropic: '',
   openai: '',
+};
+
+const defaultBudgetConfig: BudgetConfig = {
+  monthlyBudget: 0,
+  currency: 'USD',
+  allocations: [
+    { category: 'content_boost', percentage: 30, amount: 0, priority: 'high' },
+    { category: 'ad_campaigns', percentage: 25, amount: 0, priority: 'high' },
+    { category: 'influencer_collab', percentage: 15, amount: 0, priority: 'medium' },
+    { category: 'tools_software', percentage: 10, amount: 0, priority: 'medium' },
+    { category: 'content_creation', percentage: 10, amount: 0, priority: 'medium' },
+    { category: 'analytics_insights', percentage: 5, amount: 0, priority: 'low' },
+    { category: 'reserve', percentage: 5, amount: 0, priority: 'low' },
+  ],
+  optimizationMode: 'balanced',
+  autoOptimize: true,
+};
+
+// Budget optimization strategies
+const optimizationStrategies: Record<BudgetConfig['optimizationMode'], Record<BudgetCategory, number>> = {
+  balanced: {
+    content_boost: 30,
+    ad_campaigns: 25,
+    influencer_collab: 15,
+    tools_software: 10,
+    content_creation: 10,
+    analytics_insights: 5,
+    reserve: 5,
+  },
+  growth: {
+    content_boost: 35,
+    ad_campaigns: 30,
+    influencer_collab: 20,
+    tools_software: 5,
+    content_creation: 5,
+    analytics_insights: 3,
+    reserve: 2,
+  },
+  engagement: {
+    content_boost: 40,
+    ad_campaigns: 15,
+    influencer_collab: 25,
+    tools_software: 5,
+    content_creation: 8,
+    analytics_insights: 5,
+    reserve: 2,
+  },
+  reach: {
+    content_boost: 25,
+    ad_campaigns: 40,
+    influencer_collab: 20,
+    tools_software: 5,
+    content_creation: 5,
+    analytics_insights: 3,
+    reserve: 2,
+  },
 };
 
 export const useAppStore = create<AppState>()(
@@ -400,6 +483,109 @@ export const useAppStore = create<AppState>()(
             ...state.recentlyUsedHashtagCollections.filter((c) => c !== id),
           ].slice(0, 5), // Keep last 5
         })),
+
+      // Emergency Stop
+      isAutonomousModeActive: true,
+      emergencyStopTriggeredAt: null,
+      triggerEmergencyStop: () =>
+        set((state) => ({
+          isAutonomousModeActive: false,
+          emergencyStopTriggeredAt: new Date().toISOString(),
+          automationSettings: {
+            ...state.automationSettings,
+            autoPostDiscovery: false,
+            aiImageSynthesis: false,
+            smartScheduling: false,
+            autoEngagement: false,
+          },
+        })),
+      resumeAutonomousMode: () =>
+        set({
+          isAutonomousModeActive: true,
+          emergencyStopTriggeredAt: null,
+        }),
+
+      // Budget Management
+      budgetConfig: defaultBudgetConfig,
+      budgetSpends: [],
+      setBudgetConfig: (config) =>
+        set((state) => ({
+          budgetConfig: { ...state.budgetConfig, ...config },
+        })),
+      setMonthlyBudget: (amount) =>
+        set((state) => ({
+          budgetConfig: {
+            ...state.budgetConfig,
+            monthlyBudget: amount,
+            allocations: state.budgetConfig.allocations.map((alloc) => ({
+              ...alloc,
+              amount: (alloc.percentage / 100) * amount,
+            })),
+          },
+        })),
+      updateAllocation: (category, percentage) =>
+        set((state) => {
+          const newAllocations = state.budgetConfig.allocations.map((alloc) =>
+            alloc.category === category
+              ? {
+                  ...alloc,
+                  percentage,
+                  amount: (percentage / 100) * state.budgetConfig.monthlyBudget,
+                }
+              : alloc
+          );
+          return {
+            budgetConfig: {
+              ...state.budgetConfig,
+              allocations: newAllocations,
+            },
+          };
+        }),
+      addBudgetSpend: (spend) =>
+        set((state) => ({
+          budgetSpends: [spend, ...state.budgetSpends],
+        })),
+      deleteBudgetSpend: (id) =>
+        set((state) => ({
+          budgetSpends: state.budgetSpends.filter((s) => s.id !== id),
+        })),
+      optimizeBudget: (mode) =>
+        set((state) => {
+          const strategy = optimizationStrategies[mode];
+          const newAllocations = state.budgetConfig.allocations.map((alloc) => ({
+            ...alloc,
+            percentage: strategy[alloc.category],
+            amount: (strategy[alloc.category] / 100) * state.budgetConfig.monthlyBudget,
+          }));
+          return {
+            budgetConfig: {
+              ...state.budgetConfig,
+              optimizationMode: mode,
+              allocations: newAllocations,
+            },
+          };
+        }),
+
+      // Language Settings
+      setDefaultLanguage: (language) =>
+        set((state) => ({
+          persona: state.persona
+            ? { ...state.persona, defaultLanguage: language }
+            : null,
+        })),
+      setPlatformLanguage: (platform, language) =>
+        set((state) => {
+          if (!state.persona) return {};
+          const platformLanguages = { ...(state.persona.platformLanguages || {}) };
+          if (language === null) {
+            delete platformLanguages[platform];
+          } else {
+            platformLanguages[platform] = language;
+          }
+          return {
+            persona: { ...state.persona, platformLanguages },
+          };
+        }),
     }),
     {
       name: 'soci-storage-v2',
@@ -418,7 +604,22 @@ export const useAppStore = create<AppState>()(
         draftInProgress: state.draftInProgress,
         recentlyUsedTemplates: state.recentlyUsedTemplates,
         recentlyUsedHashtagCollections: state.recentlyUsedHashtagCollections,
+        isAutonomousModeActive: state.isAutonomousModeActive,
+        emergencyStopTriggeredAt: state.emergencyStopTriggeredAt,
+        budgetConfig: state.budgetConfig,
+        budgetSpends: state.budgetSpends,
       }),
     }
   )
 );
+
+// Helper function to get effective language for a platform
+export function getEffectiveLanguage(platform: Platform): Language {
+  const state = useAppStore.getState();
+  if (!state.persona) return 'en';
+  // Check for platform-specific language first
+  const platformLang = state.persona.platformLanguages?.[platform];
+  if (platformLang) return platformLang;
+  // Fall back to default language
+  return state.persona.defaultLanguage || 'en';
+}

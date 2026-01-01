@@ -9,6 +9,8 @@ import {
   X,
   Edit2,
   Trash2,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import {
   format,
@@ -31,6 +33,12 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/store/useAppStore';
 import type { Post, Platform } from '@/types';
+import {
+  getOptimalSlotsForDay,
+  getNextBestTime,
+  formatSlotTime,
+  type OptimalSlot,
+} from '@/services/scheduleOptimizer';
 
 const platformColors: Record<Platform, string> = {
   twitter: 'bg-blue-500',
@@ -61,6 +69,16 @@ function ScheduleModal({ post, onClose, onSchedule, onDelete }: ScheduleModalPro
     post.scheduledFor ? format(new Date(post.scheduledFor), 'HH:mm') : '09:00'
   );
 
+  // Get optimal slot suggestion
+  const suggestedSlot = useMemo(() => {
+    return getNextBestTime(post.platform);
+  }, [post.platform]);
+
+  // Get optimal slots for selected date
+  const dayOptimalSlots = useMemo(() => {
+    return getOptimalSlotsForDay(selectedDate, [post.platform]).slots.slice(0, 4);
+  }, [selectedDate, post.platform]);
+
   const timeSlots = useMemo(() => {
     const slots = [];
     for (let h = 0; h < 24; h++) {
@@ -78,6 +96,15 @@ function ScheduleModal({ post, onClose, onSchedule, onDelete }: ScheduleModalPro
     onSchedule(scheduledDate, selectedTime);
   };
 
+  const handleUseSuggested = () => {
+    setSelectedDate(suggestedSlot.date);
+    setSelectedTime(`${suggestedSlot.hour.toString().padStart(2, '0')}:00`);
+  };
+
+  const handleSelectOptimalSlot = (slot: OptimalSlot) => {
+    setSelectedTime(`${slot.hour.toString().padStart(2, '0')}:00`);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -90,7 +117,7 @@ function ScheduleModal({ post, onClose, onSchedule, onDelete }: ScheduleModalPro
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="glass-panel rounded-2xl p-6 max-w-md w-full"
+        className="glass-panel rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
@@ -104,7 +131,7 @@ function ScheduleModal({ post, onClose, onSchedule, onDelete }: ScheduleModalPro
         </div>
 
         {/* Post Preview */}
-        <div className="p-4 bg-white/5 rounded-xl mb-6">
+        <div className="p-4 bg-white/5 rounded-xl mb-4">
           <div className="flex items-center gap-2 mb-2">
             <span className={`w-3 h-3 rounded-full ${platformColors[post.platform]}`} />
             <span className="text-sm font-medium text-white capitalize">
@@ -114,6 +141,33 @@ function ScheduleModal({ post, onClose, onSchedule, onDelete }: ScheduleModalPro
           <p className="text-sm text-gray-400 line-clamp-2">
             {post.content || post.caption}
           </p>
+        </div>
+
+        {/* AI Suggested Best Time */}
+        <div className="p-4 bg-gradient-to-r from-primary/10 to-accent-purple/10 rounded-xl border border-primary/20 mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles size={16} className="text-primary" />
+            <span className="text-sm font-medium text-white">AI Suggested Time</span>
+            <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
+              suggestedSlot.score >= 85 ? 'bg-success/20 text-success' :
+              suggestedSlot.score >= 70 ? 'bg-primary/20 text-primary' : 'bg-warning/20 text-warning'
+            }`}>
+              {suggestedSlot.score}% match
+            </span>
+          </div>
+          <p className="text-lg font-bold text-white mb-1">
+            {format(suggestedSlot.date, 'EEEE, MMM d')} at {formatSlotTime(suggestedSlot)}
+          </p>
+          <p className="text-xs text-gray-400 mb-3">{suggestedSlot.reason}</p>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleUseSuggested}
+            className="w-full border-primary/30 hover:border-primary"
+          >
+            <Zap size={14} className="mr-1" />
+            Use This Time
+          </Button>
         </div>
 
         {/* Date Selection */}
@@ -128,9 +182,34 @@ function ScheduleModal({ post, onClose, onSchedule, onDelete }: ScheduleModalPro
           />
         </div>
 
+        {/* Optimal Time Slots for Selected Date */}
+        {dayOptimalSlots.length > 0 && (
+          <div className="mb-4">
+            <label className="text-sm text-gray-400 mb-2 block">Optimal times for this day</label>
+            <div className="flex flex-wrap gap-2">
+              {dayOptimalSlots.map((slot, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSelectOptimalSlot(slot)}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-1 ${
+                    selectedTime === `${slot.hour.toString().padStart(2, '0')}:00`
+                      ? 'bg-primary text-white'
+                      : slot.score >= 80
+                        ? 'bg-success/20 text-success hover:bg-success/30 border border-success/30'
+                        : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                  }`}
+                >
+                  {slot.score >= 80 && <Sparkles size={12} />}
+                  {formatSlotTime(slot)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Time Selection */}
         <div className="mb-6">
-          <label className="text-sm text-gray-400 mb-2 block">Time</label>
+          <label className="text-sm text-gray-400 mb-2 block">Custom time</label>
           <select
             value={selectedTime}
             onChange={(e) => setSelectedTime(e.target.value)}
@@ -142,17 +221,6 @@ function ScheduleModal({ post, onClose, onSchedule, onDelete }: ScheduleModalPro
               </option>
             ))}
           </select>
-        </div>
-
-        {/* Optimal Times Suggestion */}
-        <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 mb-6">
-          <p className="text-xs text-primary">
-            Optimal times for {platformLabels[post.platform]}:
-            {post.platform === 'twitter' && ' 9:00 AM, 12:00 PM, 5:00 PM'}
-            {post.platform === 'linkedin' && ' 7:00 AM, 12:00 PM, 5:00 PM'}
-            {post.platform === 'instagram' && ' 11:00 AM, 2:00 PM, 7:00 PM'}
-            {post.platform === 'tiktok' && ' 7:00 PM, 8:00 PM, 9:00 PM'}
-          </p>
         </div>
 
         {/* Actions */}
@@ -181,17 +249,41 @@ function WeekView({
   scheduledPosts,
   onSelectPost,
   platformColors,
+  showOptimalTimes = true,
 }: {
   currentDate: Date;
   scheduledPosts: Post[];
   onSelectPost: (post: Post) => void;
   platformColors: Record<Platform, string>;
+  showOptimalTimes?: boolean;
 }) {
   const weekStart = startOfWeek(currentDate);
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   // Time slots from 6 AM to 11 PM
   const timeSlots = Array.from({ length: 18 }, (_, i) => i + 6);
+
+  // Get optimal slots for each day
+  const optimalSlotsPerDay = useMemo(() => {
+    if (!showOptimalTimes) return new Map();
+    const map = new Map<string, Map<number, OptimalSlot[]>>();
+
+    weekDays.forEach(day => {
+      const dayKey = format(day, 'yyyy-MM-dd');
+      const daySchedule = getOptimalSlotsForDay(day, ['instagram', 'twitter', 'linkedin', 'tiktok']);
+      const hourMap = new Map<number, OptimalSlot[]>();
+
+      daySchedule.slots.forEach(slot => {
+        const existing = hourMap.get(slot.hour) || [];
+        existing.push(slot);
+        hourMap.set(slot.hour, existing);
+      });
+
+      map.set(dayKey, hourMap);
+    });
+
+    return map;
+  }, [weekDays, showOptimalTimes]);
 
   // Get posts for a specific day and hour
   const getPostsForTimeSlot = (day: Date, hour: number) => {
@@ -200,6 +292,21 @@ function WeekView({
       const postDate = parseISO(post.scheduledFor);
       return isSameDay(postDate, day) && getHours(postDate) === hour;
     });
+  };
+
+  // Check if a slot is optimal
+  const getOptimalIndicator = (day: Date, hour: number) => {
+    const dayKey = format(day, 'yyyy-MM-dd');
+    const dayMap = optimalSlotsPerDay.get(dayKey);
+    if (!dayMap) return null;
+
+    const slots = dayMap.get(hour);
+    if (!slots || slots.length === 0) return null;
+
+    const bestScore = Math.max(...slots.map((s: OptimalSlot) => s.score));
+    if (bestScore >= 85) return 'peak';
+    if (bestScore >= 70) return 'high';
+    return null;
   };
 
   return (
@@ -232,13 +339,24 @@ function WeekView({
               </div>
               {weekDays.map((day, dayIndex) => {
                 const posts = getPostsForTimeSlot(day, hour);
+                const optimalLevel = showOptimalTimes ? getOptimalIndicator(day, hour) : null;
+
                 return (
                   <div
                     key={dayIndex}
                     className={`min-h-[50px] p-1 border-l border-glass-border relative ${
                       isToday(day) ? 'bg-primary/5' : ''
+                    } ${
+                      optimalLevel === 'peak' ? 'bg-success/5' :
+                      optimalLevel === 'high' ? 'bg-primary/5' : ''
                     }`}
                   >
+                    {/* Optimal time indicator */}
+                    {optimalLevel && posts.length === 0 && (
+                      <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${
+                        optimalLevel === 'peak' ? 'bg-success animate-pulse' : 'bg-primary/50'
+                      }`} title={optimalLevel === 'peak' ? 'Peak engagement time' : 'High engagement time'} />
+                    )}
                     {posts.map((post) => (
                       <button
                         key={post.id}
@@ -259,6 +377,20 @@ function WeekView({
             </div>
           ))}
         </div>
+
+        {/* Legend */}
+        {showOptimalTimes && (
+          <div className="flex items-center gap-4 mt-3 px-2 text-xs text-gray-500">
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              <span>Peak engagement</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-primary/50" />
+              <span>High engagement</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

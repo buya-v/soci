@@ -17,6 +17,9 @@ export interface Persona {
   topics: string[];
   maxDailyPosts: number;
   isActive: boolean;
+  // Language settings
+  defaultLanguage?: Language;
+  platformLanguages?: Partial<Record<Platform, Language>>;
 }
 
 // Trend types
@@ -50,10 +53,52 @@ export interface Post {
   engagement?: PostEngagement;
   imageUrl?: string;
   trendId?: string;
+  language?: Language; // Per-post language override
 }
 
 export type Platform = 'twitter' | 'linkedin' | 'instagram' | 'tiktok';
 export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed';
+
+// Language types for multi-language content
+export type Language =
+  | 'en' // English
+  | 'es' // Spanish
+  | 'fr' // French
+  | 'de' // German
+  | 'pt' // Portuguese
+  | 'it' // Italian
+  | 'ja' // Japanese
+  | 'zh' // Chinese
+  | 'ko' // Korean
+  | 'ar' // Arabic
+  | 'hi' // Hindi
+  | 'ru' // Russian
+  | 'nl' // Dutch
+  | 'tr'; // Turkish
+
+export interface LanguageConfig {
+  code: Language;
+  name: string;
+  nativeName: string;
+  direction: 'ltr' | 'rtl';
+}
+
+export const SUPPORTED_LANGUAGES: LanguageConfig[] = [
+  { code: 'en', name: 'English', nativeName: 'English', direction: 'ltr' },
+  { code: 'es', name: 'Spanish', nativeName: 'Español', direction: 'ltr' },
+  { code: 'fr', name: 'French', nativeName: 'Français', direction: 'ltr' },
+  { code: 'de', name: 'German', nativeName: 'Deutsch', direction: 'ltr' },
+  { code: 'pt', name: 'Portuguese', nativeName: 'Português', direction: 'ltr' },
+  { code: 'it', name: 'Italian', nativeName: 'Italiano', direction: 'ltr' },
+  { code: 'ja', name: 'Japanese', nativeName: '日本語', direction: 'ltr' },
+  { code: 'zh', name: 'Chinese', nativeName: '中文', direction: 'ltr' },
+  { code: 'ko', name: 'Korean', nativeName: '한국어', direction: 'ltr' },
+  { code: 'ar', name: 'Arabic', nativeName: 'العربية', direction: 'rtl' },
+  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', direction: 'ltr' },
+  { code: 'ru', name: 'Russian', nativeName: 'Русский', direction: 'ltr' },
+  { code: 'nl', name: 'Dutch', nativeName: 'Nederlands', direction: 'ltr' },
+  { code: 'tr', name: 'Turkish', nativeName: 'Türkçe', direction: 'ltr' },
+];
 
 export interface PostEngagement {
   likes: number;
@@ -148,7 +193,7 @@ export interface GeneratedContent {
 }
 
 // Navigation
-export type ViewType = 'dashboard' | 'trends' | 'content' | 'templates' | 'hashtags' | 'media' | 'drafts' | 'calendar' | 'video' | 'automation';
+export type ViewType = 'dashboard' | 'trends' | 'content' | 'templates' | 'hashtags' | 'media' | 'drafts' | 'calendar' | 'video' | 'automation' | 'budget';
 
 // App state
 export interface AppState {
@@ -229,4 +274,48 @@ export interface MediaFolder {
   color: string;
   itemCount: number;
   createdAt: string;
+}
+
+// Budget Management types
+export interface BudgetConfig {
+  monthlyBudget: number;
+  currency: 'USD' | 'EUR' | 'GBP';
+  allocations: BudgetAllocation[];
+  optimizationMode: 'balanced' | 'growth' | 'engagement' | 'reach';
+  autoOptimize: boolean;
+}
+
+export interface BudgetAllocation {
+  category: BudgetCategory;
+  percentage: number;
+  amount: number;
+  platform?: Platform;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export type BudgetCategory =
+  | 'content_boost'
+  | 'ad_campaigns'
+  | 'influencer_collab'
+  | 'tools_software'
+  | 'content_creation'
+  | 'analytics_insights'
+  | 'reserve';
+
+export interface BudgetSpend {
+  id: string;
+  category: BudgetCategory;
+  amount: number;
+  description: string;
+  platform?: Platform;
+  date: string;
+  roi?: number;
+}
+
+export interface BudgetRecommendation {
+  category: BudgetCategory;
+  currentPercentage: number;
+  recommendedPercentage: number;
+  reason: string;
+  expectedImpact: string;
 }

@@ -33,6 +33,10 @@ import {
   Hash,
   Search,
   X,
+  Play,
+  AlertTriangle,
+  StopCircle,
+  Wallet,
 } from 'lucide-react';
 import {
   exportPostsToCSV,
@@ -362,6 +366,155 @@ function QuickSearch({
   );
 }
 
+// Emergency Stop Button component
+function EmergencyStopButton() {
+  const {
+    isAutonomousModeActive,
+    emergencyStopTriggeredAt,
+    triggerEmergencyStop,
+    resumeAutonomousMode,
+    addNotification,
+    addActivity,
+  } = useAppStore();
+  const [showConfirmResume, setShowConfirmResume] = useState(false);
+
+  const handleEmergencyStop = () => {
+    triggerEmergencyStop();
+    addNotification({
+      type: 'warning',
+      title: 'Emergency Stop Activated',
+      message: 'All autonomous operations have been halted',
+    });
+    addActivity({
+      id: crypto.randomUUID(),
+      action: 'Emergency Stop',
+      description: 'All autonomous operations have been halted by owner',
+      status: 'success',
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  const handleResume = () => {
+    resumeAutonomousMode();
+    setShowConfirmResume(false);
+    addNotification({
+      type: 'success',
+      title: 'Autonomous Mode Resumed',
+      message: 'Operations are now running normally',
+    });
+    addActivity({
+      id: crypto.randomUUID(),
+      action: 'Operations Resumed',
+      description: 'Autonomous operations have been resumed by owner',
+      status: 'success',
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  if (!isAutonomousModeActive) {
+    return (
+      <div className="relative">
+        <div className="flex items-center gap-2">
+          {/* Stopped Status Indicator */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-critical/10 border border-critical/30 rounded-xl">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-critical opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-critical"></span>
+            </span>
+            <span className="text-xs font-medium text-critical">STOPPED</span>
+          </div>
+
+          {/* Resume Button */}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowConfirmResume(true)}
+            className="flex items-center gap-2 border-success/30 hover:border-success/50 text-success"
+          >
+            <Play size={16} />
+            <span className="hidden sm:inline">Resume</span>
+          </Button>
+        </div>
+
+        {/* Resume Confirmation Modal */}
+        <AnimatePresence>
+          {showConfirmResume && (
+            <>
+              <div
+                className="fixed inset-0 bg-black/50 z-40"
+                onClick={() => setShowConfirmResume(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                className="absolute right-0 top-full mt-2 w-80 bg-surface border border-glass-border rounded-xl shadow-xl z-50 p-4"
+              >
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="p-2 rounded-lg bg-success/10">
+                    <Play size={20} className="text-success" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-white">Resume Operations?</h4>
+                    <p className="text-sm text-gray-400 mt-1">
+                      This will re-enable autonomous mode. Automation settings will need to be configured separately.
+                    </p>
+                    {emergencyStopTriggeredAt && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Stopped: {formatDistanceToNow(new Date(emergencyStopTriggeredAt), { addSuffix: true })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setShowConfirmResume(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="flex-1 bg-success hover:bg-success/80"
+                    onClick={handleResume}
+                  >
+                    Resume
+                  </Button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* Active Status Indicator */}
+      <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-success/10 border border-success/30 rounded-xl">
+        <span className="relative flex h-2.5 w-2.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success"></span>
+        </span>
+        <span className="text-xs font-medium text-success">AUTONOMOUS</span>
+      </div>
+
+      {/* Emergency Stop Button */}
+      <button
+        onClick={handleEmergencyStop}
+        className="group flex items-center gap-2 px-3 py-2 bg-critical/10 border-2 border-critical/50 hover:border-critical hover:bg-critical/20 rounded-xl transition-all duration-200"
+      >
+        <StopCircle size={18} className="text-critical group-hover:scale-110 transition-transform" />
+        <span className="text-sm font-bold text-critical hidden sm:inline">EMERGENCY STOP</span>
+      </button>
+    </div>
+  );
+}
+
 // Export dropdown component
 function ExportDropdown({
   analytics,
@@ -521,7 +674,17 @@ function ExportDropdown({
 export function Dashboard() {
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
   const { data: serverActivities, isLoading: activitiesLoading } = useActivities();
-  const { activities: storeActivities, posts, templates, hashtagCollections, setActiveView } = useAppStore();
+  const {
+    activities: storeActivities,
+    posts,
+    templates,
+    hashtagCollections,
+    setActiveView,
+    isAutonomousModeActive,
+    emergencyStopTriggeredAt,
+    budgetConfig,
+    budgetSpends,
+  } = useAppStore();
 
   // Get top templates by usage
   const topTemplates = [...templates]
@@ -567,6 +730,27 @@ export function Dashboard() {
           { name: 'TikTok', value: 10, color: '#000000' },
         ];
 
+  // Calculate budget stats for this month
+  const currentMonthSpends = useMemo(() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    return budgetSpends.filter((s) => s.date >= monthStart);
+  }, [budgetSpends]);
+
+  const totalSpent = useMemo(() => {
+    return currentMonthSpends.reduce((sum, spend) => sum + spend.amount, 0);
+  }, [currentMonthSpends]);
+
+  const remainingBudget = budgetConfig.monthlyBudget - totalSpent;
+  const spentPercentage = budgetConfig.monthlyBudget > 0 ? (totalSpent / budgetConfig.monthlyBudget) * 100 : 0;
+
+  const currencySymbols: Record<string, string> = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+  };
+  const currencySymbol = currencySymbols[budgetConfig.currency] || '$';
+
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
@@ -580,13 +764,44 @@ export function Dashboard() {
       transition={{ duration: 0.5 }}
       className="space-y-6"
     >
+      {/* Emergency Stop Warning Banner */}
+      {!isAutonomousModeActive && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 p-4 bg-critical/10 border border-critical/30 rounded-xl"
+        >
+          <AlertTriangle size={24} className="text-critical shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-critical">Autonomous Operations Stopped</p>
+            <p className="text-sm text-gray-400">
+              All automated features are currently disabled.
+              {emergencyStopTriggeredAt && (
+                <span className="text-gray-500">
+                  {' '}Stopped {formatDistanceToNow(new Date(emergencyStopTriggeredAt), { addSuffix: true })}.
+                </span>
+              )}
+            </p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setActiveView('automation')}
+            className="shrink-0"
+          >
+            View Settings
+          </Button>
+        </motion.div>
+      )}
+
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold gradient-text mb-2">Growth Hub</h1>
           <p className="text-gray-400 text-sm lg:text-base">Your autonomous social media command center</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <EmergencyStopButton />
           <QuickSearch
             posts={posts}
             templates={templates}
@@ -884,6 +1099,81 @@ export function Dashboard() {
           )}
         </GlassCard>
       </div>
+
+      {/* Budget Overview Widget */}
+      <GlassCard className="p-4 lg:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Wallet size={20} className="text-primary" />
+            Budget Overview
+          </h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setActiveView('budget')}
+          >
+            Manage Budget
+          </Button>
+        </div>
+        {budgetConfig.monthlyBudget === 0 ? (
+          <div className="text-center py-6">
+            <Wallet size={32} className="mx-auto text-gray-600 mb-3" />
+            <p className="text-sm text-gray-400 mb-3">No budget configured yet</p>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setActiveView('budget')}
+            >
+              Set Up Budget
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Monthly Budget */}
+            <div className="p-4 bg-white/5 rounded-xl">
+              <p className="text-xs text-gray-500 mb-1">Monthly Budget</p>
+              <p className="text-2xl font-bold text-white">
+                {currencySymbol}{budgetConfig.monthlyBudget.toLocaleString()}
+              </p>
+              <p className="text-xs text-gray-500 mt-1 capitalize">
+                {budgetConfig.optimizationMode} mode
+              </p>
+            </div>
+
+            {/* Spent This Month */}
+            <div className="p-4 bg-white/5 rounded-xl">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-gray-500">Spent This Month</p>
+                <span className={`text-xs font-medium ${spentPercentage > 80 ? 'text-warning' : 'text-success'}`}>
+                  {spentPercentage.toFixed(0)}%
+                </span>
+              </div>
+              <p className="text-2xl font-bold text-white">
+                {currencySymbol}{totalSpent.toLocaleString()}
+              </p>
+              <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    spentPercentage > 90 ? 'bg-critical' : spentPercentage > 70 ? 'bg-warning' : 'bg-success'
+                  }`}
+                  style={{ width: `${Math.min(spentPercentage, 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Remaining */}
+            <div className="p-4 bg-white/5 rounded-xl">
+              <p className="text-xs text-gray-500 mb-1">Remaining</p>
+              <p className={`text-2xl font-bold ${remainingBudget < 0 ? 'text-critical' : 'text-success'}`}>
+                {currencySymbol}{remainingBudget.toLocaleString()}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {currentMonthSpends.length} transactions
+              </p>
+            </div>
+          </div>
+        )}
+      </GlassCard>
 
       {/* Top Templates & Hashtags */}
       {(topTemplates.length > 0 || topHashtagCollections.length > 0) && (

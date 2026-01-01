@@ -24,6 +24,7 @@ const DraftsQueue = lazy(() => import('./components/drafts/DraftsQueue').then(m 
 const CalendarView = lazy(() => import('./components/calendar/CalendarView').then(m => ({ default: m.CalendarView })));
 const VideoLab = lazy(() => import('./components/video/VideoLab').then(m => ({ default: m.VideoLab })));
 const AutomationHub = lazy(() => import('./components/automation/AutomationHub').then(m => ({ default: m.AutomationHub })));
+const BudgetManager = lazy(() => import('./components/budget/BudgetManager').then(m => ({ default: m.BudgetManager })));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -118,6 +119,8 @@ function AppContent() {
         return <VideoLab />;
       case 'automation':
         return <AutomationHub />;
+      case 'budget':
+        return <BudgetManager />;
       default:
         return <Dashboard />;
     }

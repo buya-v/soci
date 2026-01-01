@@ -31,11 +31,13 @@ import {
   Lightbulb,
   ChevronRight,
   Zap,
+  Globe2,
+  Languages,
 } from 'lucide-react';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore, getEffectiveLanguage } from '@/store/useAppStore';
 import {
   generateContent,
   generateContentVariations,
@@ -50,7 +52,8 @@ import { predictEngagement, suggestHashtags, getNextOptimalTime, getPlatformTips
 import { PerformancePrediction } from './PerformancePrediction';
 import { TemplateVariableModal } from './TemplateVariableModal';
 import { PreflightCheckModal } from './PreflightCheckModal';
-import type { Platform, Persona, ContentTemplate, HashtagCollection } from '@/types';
+import type { Platform, Persona, ContentTemplate, HashtagCollection, Language } from '@/types';
+import { SUPPORTED_LANGUAGES } from '@/types';
 
 const toneOptions: Persona['tone'][] = ['professional', 'casual', 'witty', 'inspirational'];
 const platformOptions: { id: Platform; label: string }[] = [
@@ -404,6 +407,8 @@ export function ContentLab() {
   const [topic, setTopic] = useState('');
   const [tone, setTone] = useState<Persona['tone']>('professional');
   const [platform, setPlatform] = useState<Platform>('instagram');
+  const [language, setLanguage] = useState<Language>(() => getEffectiveLanguage('instagram'));
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
@@ -598,6 +603,11 @@ export function ContentLab() {
     }
   }, [generatedPost]);
 
+  // Update language when platform changes
+  useEffect(() => {
+    setLanguage(getEffectiveLanguage(platform));
+  }, [platform]);
+
   // Initialize clients with stored API keys
   useEffect(() => {
     if (apiKeys.anthropic) {
@@ -706,6 +716,7 @@ export function ContentLab() {
         niche: persona?.niche,
         targetAudience: persona?.targetAudience,
         includeHashtags: true,
+        language,
       });
 
       setGeneratedPost({
@@ -807,6 +818,7 @@ export function ContentLab() {
         tone,
         niche: persona?.niche,
         targetAudience: persona?.targetAudience,
+        language,
       }, 3);
 
       setVariations(result);
@@ -887,6 +899,7 @@ export function ContentLab() {
       platform,
       status: 'draft',
       imageUrl: generatedPost.imageUrl,
+      language,
     });
     setShowPreflightCheck(false);
     clearDraftInProgress(); // Clear auto-saved draft after saving
@@ -1253,6 +1266,65 @@ export function ContentLab() {
                 </button>
               ))}
             </div>
+          </GlassCard>
+
+          {/* Language Selection */}
+          <GlassCard className="p-6">
+            <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+              <Languages size={16} className="text-primary" />
+              Content Language
+            </label>
+            <div className="relative">
+              <button
+                onClick={() => setShowLanguagePicker(!showLanguagePicker)}
+                className="w-full flex items-center justify-between py-2.5 px-4 bg-white/5 border border-glass-border rounded-xl text-sm font-medium text-white hover:border-glass-border-hover transition-all"
+              >
+                <span className="flex items-center gap-2">
+                  <Globe2 size={16} className="text-gray-400" />
+                  {SUPPORTED_LANGUAGES.find(l => l.code === language)?.name || 'English'}
+                  <span className="text-xs text-gray-500">
+                    ({SUPPORTED_LANGUAGES.find(l => l.code === language)?.nativeName})
+                  </span>
+                </span>
+                <ChevronDown size={16} className={`text-gray-400 transition-transform ${showLanguagePicker ? 'rotate-180' : ''}`} />
+              </button>
+              <AnimatePresence>
+                {showLanguagePicker && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute top-full left-0 right-0 mt-2 glass-panel rounded-xl border border-glass-border overflow-hidden z-20 max-h-64 overflow-y-auto"
+                  >
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => {
+                          setLanguage(lang.code);
+                          setShowLanguagePicker(false);
+                        }}
+                        className={`w-full px-4 py-3 text-left hover:bg-white/5 transition-colors border-b border-glass-border last:border-0 flex items-center justify-between ${
+                          language === lang.code ? 'bg-primary/10' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-white">{lang.name}</span>
+                          <span className="text-xs text-gray-500">{lang.nativeName}</span>
+                        </div>
+                        {language === lang.code && (
+                          <Check size={16} className="text-primary" />
+                        )}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            {persona?.platformLanguages?.[platform] && persona.platformLanguages[platform] !== persona.defaultLanguage && (
+              <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                <span className="text-primary">Platform default:</span> {SUPPORTED_LANGUAGES.find(l => l.code === persona.platformLanguages?.[platform])?.name}
+              </p>
+            )}
           </GlassCard>
 
           {/* Tips & Best Times */}

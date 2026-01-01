@@ -13,6 +13,7 @@ import {
   BookTemplate,
   Hash,
   Image,
+  Wallet,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/ui/NotificationCenter';
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
   { id: 'drafts', label: 'Queue', icon: FileText },
   { id: 'calendar', label: 'Calendar', icon: Calendar },
   { id: 'video', label: 'Video Lab', icon: Video },
+  { id: 'budget', label: 'Budget', icon: Wallet },
   { id: 'automation', label: 'Automation', icon: Settings },
 ];
 

@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
-import type { Platform, Persona } from '@/types';
+import type { Platform, Persona, Language } from '@/types';
+import { SUPPORTED_LANGUAGES } from '@/types';
 
 // API key management
 let anthropicClient: Anthropic | null = null;
@@ -64,6 +65,7 @@ export interface ContentGenerationParams {
   targetAudience?: string;
   includeHashtags?: boolean;
   additionalContext?: string;
+  language?: Language;
 }
 
 export interface GeneratedContent {
@@ -78,9 +80,11 @@ export async function generateContent(params: ContentGenerationParams): Promise<
     throw new Error('Anthropic API key not configured. Please add your API key in Settings.');
   }
 
-  const { topic, platform, tone, niche, targetAudience, includeHashtags = true, additionalContext } = params;
+  const { topic, platform, tone, niche, targetAudience, includeHashtags = true, additionalContext, language = 'en' } = params;
   const platformSettings = platformConfig[platform];
   const toneDescription = toneConfig[tone];
+  const languageConfig = SUPPORTED_LANGUAGES.find(l => l.code === language);
+  const languageName = languageConfig?.name || 'English';
 
   const systemPrompt = `You are an expert social media content creator specializing in viral, high-engagement content.
 
@@ -89,8 +93,10 @@ Your expertise:
 - Understanding audience psychology and what makes content shareable
 - Crafting hooks that stop the scroll
 - Writing compelling calls-to-action
+- Writing authentic, native-level content in multiple languages
 
-Output format: Respond with valid JSON only, no markdown, no code blocks.`;
+Output format: Respond with valid JSON only, no markdown, no code blocks.
+IMPORTANT: All content must be written in ${languageName}. Do not use any other language for the caption or call-to-action.`;
 
   const userPrompt = `Create a ${platform} post about: "${topic}"
 
@@ -98,20 +104,21 @@ Requirements:
 - Tone: ${toneDescription}
 - Style: ${platformSettings.style}
 - Maximum length: ${platformSettings.maxLength} characters for the main caption
+- Language: Write ALL content in ${languageName} (${language})
 ${niche ? `- Niche/Industry: ${niche}` : ''}
 ${targetAudience ? `- Target audience: ${targetAudience}` : ''}
 ${additionalContext ? `- Additional context: ${additionalContext}` : ''}
 
 Respond with this exact JSON structure:
 {
-  "caption": "The main post content (under ${platformSettings.maxLength} chars)",
+  "caption": "The main post content in ${languageName} (under ${platformSettings.maxLength} chars)",
   "hashtags": ["relevant", "hashtags", "without", "hash", "symbol"],
-  "hook": "The attention-grabbing first line",
-  "callToAction": "What you want the audience to do"
+  "hook": "The attention-grabbing first line in ${languageName}",
+  "callToAction": "What you want the audience to do in ${languageName}"
 }
 
-${includeHashtags ? 'Include 5-8 relevant hashtags.' : 'Do not include hashtags.'}
-Make the content authentic, not generic. Avoid clichés.`;
+${includeHashtags ? `Include 5-8 relevant hashtags that work well for ${languageName}-speaking audiences.` : 'Do not include hashtags.'}
+Make the content authentic, not generic. Avoid clichés. Write in natural, native ${languageName}.`;
 
   const response = await anthropicClient.messages.create({
     model: 'claude-sonnet-4-20250514',
@@ -163,13 +170,16 @@ export async function generateContentVariations(
     throw new Error('Anthropic API key not configured. Please add your API key in Settings.');
   }
 
-  const { topic, platform, tone } = params;
+  const { topic, platform, tone, language = 'en' } = params;
   const platformSettings = platformConfig[platform];
   const toneDescription = toneConfig[tone];
+  const languageConfig = SUPPORTED_LANGUAGES.find(l => l.code === language);
+  const languageName = languageConfig?.name || 'English';
 
   const systemPrompt = `You are an expert social media content creator. Generate multiple unique variations of content, each with a different angle or approach.
 
-Output format: Respond with valid JSON only, no markdown, no code blocks.`;
+Output format: Respond with valid JSON only, no markdown, no code blocks.
+IMPORTANT: All content must be written in ${languageName}. Do not use any other language.`;
 
   const userPrompt = `Create ${count} different ${platform} posts about: "${topic}"
 
@@ -177,20 +187,21 @@ Requirements for each:
 - Tone: ${toneDescription}
 - Style: ${platformSettings.style}
 - Maximum length: ${platformSettings.maxLength} characters
+- Language: Write ALL content in ${languageName} (${language})
 - Each variation should have a unique angle/approach
 
 Respond with this exact JSON structure:
 {
   "variations": [
     {
-      "caption": "Post content",
+      "caption": "Post content in ${languageName}",
       "hashtags": ["relevant", "hashtags"],
       "angle": "Brief description of this variation's unique angle"
     }
   ]
 }
 
-Make each variation distinctly different while staying on topic.`;
+Make each variation distinctly different while staying on topic. Write in natural, native ${languageName}.`;
 
   const response = await anthropicClient.messages.create({
     model: 'claude-sonnet-4-20250514',
