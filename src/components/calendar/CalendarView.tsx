@@ -19,10 +19,13 @@ import {
   addDays,
   addMonths,
   subMonths,
+  addWeeks,
+  subWeeks,
   isSameMonth,
   isSameDay,
   isToday,
   parseISO,
+  getHours,
 } from 'date-fns';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -172,19 +175,108 @@ function ScheduleModal({ post, onClose, onSchedule, onDelete }: ScheduleModalPro
   );
 }
 
+// Week View Component
+function WeekView({
+  currentDate,
+  scheduledPosts,
+  onSelectPost,
+  platformColors,
+}: {
+  currentDate: Date;
+  scheduledPosts: Post[];
+  onSelectPost: (post: Post) => void;
+  platformColors: Record<Platform, string>;
+}) {
+  const weekStart = startOfWeek(currentDate);
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  // Time slots from 6 AM to 11 PM
+  const timeSlots = Array.from({ length: 18 }, (_, i) => i + 6);
+
+  // Get posts for a specific day and hour
+  const getPostsForTimeSlot = (day: Date, hour: number) => {
+    return scheduledPosts.filter((post) => {
+      if (!post.scheduledFor) return false;
+      const postDate = parseISO(post.scheduledFor);
+      return isSameDay(postDate, day) && getHours(postDate) === hour;
+    });
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="min-w-[800px]">
+        {/* Week header */}
+        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-glass-border">
+          <div className="p-2" /> {/* Empty corner */}
+          {weekDays.map((day, index) => (
+            <div
+              key={index}
+              className={`p-3 text-center border-l border-glass-border ${
+                isToday(day) ? 'bg-primary/10' : ''
+              }`}
+            >
+              <p className="text-xs text-gray-500">{format(day, 'EEE')}</p>
+              <p className={`text-lg font-semibold ${isToday(day) ? 'text-primary' : 'text-white'}`}>
+                {format(day, 'd')}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Time grid */}
+        <div className="max-h-[600px] overflow-y-auto">
+          {timeSlots.map((hour) => (
+            <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-glass-border">
+              <div className="p-2 text-xs text-gray-500 text-right pr-3 border-r border-glass-border">
+                {format(new Date().setHours(hour, 0), 'h a')}
+              </div>
+              {weekDays.map((day, dayIndex) => {
+                const posts = getPostsForTimeSlot(day, hour);
+                return (
+                  <div
+                    key={dayIndex}
+                    className={`min-h-[50px] p-1 border-l border-glass-border relative ${
+                      isToday(day) ? 'bg-primary/5' : ''
+                    }`}
+                  >
+                    {posts.map((post) => (
+                      <button
+                        key={post.id}
+                        onClick={() => onSelectPost(post)}
+                        className={`w-full text-left px-2 py-1 rounded text-[10px] text-white truncate hover:opacity-80 transition-opacity mb-1 ${platformColors[post.platform]}`}
+                      >
+                        <span className="font-medium">
+                          {post.scheduledFor && format(parseISO(post.scheduledFor), 'h:mm a')}
+                        </span>
+                        <span className="opacity-70 ml-1 hidden sm:inline">
+                          - {(post.content || post.caption || '').slice(0, 20)}...
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CalendarView() {
   const { posts, updatePost, deletePost, addNotification, addPersistentNotification, setActiveView } = useAppStore();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
 
   // Get scheduled posts
   const scheduledPosts = posts.filter((p) => p.status === 'scheduled' && p.scheduledFor);
 
-  // Generate calendar days
+  // Generate calendar days for month view
   const calendarDays = useMemo(() => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
     const startDate = startOfWeek(monthStart);
     const endDate = endOfWeek(monthEnd);
 
@@ -197,7 +289,42 @@ export function CalendarView() {
     }
 
     return days;
-  }, [currentMonth]);
+  }, [currentDate]);
+
+  // Navigation handlers
+  const handlePrevious = () => {
+    if (viewMode === 'month') {
+      setCurrentDate(subMonths(currentDate, 1));
+    } else {
+      setCurrentDate(subWeeks(currentDate, 1));
+    }
+  };
+
+  const handleNext = () => {
+    if (viewMode === 'month') {
+      setCurrentDate(addMonths(currentDate, 1));
+    } else {
+      setCurrentDate(addWeeks(currentDate, 1));
+    }
+  };
+
+  const handleToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  // Get the display title based on view mode
+  const getDisplayTitle = () => {
+    if (viewMode === 'month') {
+      return format(currentDate, 'MMMM yyyy');
+    } else {
+      const weekStart = startOfWeek(currentDate);
+      const weekEnd = endOfWeek(currentDate);
+      if (isSameMonth(weekStart, weekEnd)) {
+        return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'd, yyyy')}`;
+      }
+      return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
+    }
+  };
 
   // Get posts for a specific day
   const getPostsForDay = (day: Date) => {
@@ -271,16 +398,16 @@ export function CalendarView() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+              onClick={handlePrevious}
               className="p-2 rounded-lg hover:bg-white/5 transition-colors"
             >
               <ChevronLeft size={20} className="text-gray-400" />
             </button>
-            <h2 className="text-lg font-semibold text-white min-w-[180px] text-center">
-              {format(currentMonth, 'MMMM yyyy')}
+            <h2 className="text-lg font-semibold text-white min-w-[220px] text-center">
+              {getDisplayTitle()}
             </h2>
             <button
-              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+              onClick={handleNext}
               className="p-2 rounded-lg hover:bg-white/5 transition-colors"
             >
               <ChevronRight size={20} className="text-gray-400" />
@@ -288,7 +415,7 @@ export function CalendarView() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setCurrentMonth(new Date())}
+              onClick={handleToday}
               className="px-3 py-1.5 text-sm text-primary hover:bg-primary/10 rounded-lg transition-colors"
             >
               Today
@@ -317,56 +444,67 @@ export function CalendarView() {
 
       {/* Calendar Grid */}
       <GlassCard className="p-4 lg:p-6">
-        {/* Week Days Header */}
-        <div className="grid grid-cols-7 mb-2">
-          {weekDays.map((day) => (
-            <div key={day} className="p-2 text-center text-xs font-medium text-gray-500">
-              {day}
+        {viewMode === 'week' ? (
+          <WeekView
+            currentDate={currentDate}
+            scheduledPosts={scheduledPosts}
+            onSelectPost={setSelectedPost}
+            platformColors={platformColors}
+          />
+        ) : (
+          <>
+            {/* Week Days Header */}
+            <div className="grid grid-cols-7 mb-2">
+              {weekDays.map((day) => (
+                <div key={day} className="p-2 text-center text-xs font-medium text-gray-500">
+                  {day}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Calendar Days */}
-        <div className="grid grid-cols-7 gap-1">
-          {calendarDays.map((day, index) => {
-            const dayPosts = getPostsForDay(day);
-            const isCurrentMonth = isSameMonth(day, currentMonth);
-            const isCurrentDay = isToday(day);
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7 gap-1">
+              {calendarDays.map((day, index) => {
+                const dayPosts = getPostsForDay(day);
+                const isCurrentMonthDay = isSameMonth(day, currentDate);
+                const isCurrentDay = isToday(day);
 
-            return (
-              <div
-                key={index}
-                className={`min-h-[100px] p-2 rounded-lg border transition-colors ${
-                  isCurrentMonth
-                    ? 'border-glass-border hover:border-primary/30'
-                    : 'border-transparent opacity-40'
-                } ${isCurrentDay ? 'bg-primary/5 border-primary/30' : ''}`}
-              >
-                <div className={`text-sm font-medium mb-1 ${
-                  isCurrentDay ? 'text-primary' : isCurrentMonth ? 'text-white' : 'text-gray-600'
-                }`}>
-                  {format(day, 'd')}
-                </div>
-                <div className="space-y-1">
-                  {dayPosts.slice(0, 3).map((post) => (
-                    <button
-                      key={post.id}
-                      onClick={() => setSelectedPost(post)}
-                      className={`w-full text-left px-2 py-1 rounded text-[10px] text-white truncate hover:opacity-80 transition-opacity ${platformColors[post.platform]}`}
-                    >
-                      {post.scheduledFor && format(parseISO(post.scheduledFor), 'h:mm a')}
-                    </button>
-                  ))}
-                  {dayPosts.length > 3 && (
-                    <p className="text-[10px] text-gray-500 px-2">
-                      +{dayPosts.length - 3} more
-                    </p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                return (
+                  <div
+                    key={index}
+                    className={`min-h-[100px] p-2 rounded-lg border transition-colors ${
+                      isCurrentMonthDay
+                        ? 'border-glass-border hover:border-primary/30'
+                        : 'border-transparent opacity-40'
+                    } ${isCurrentDay ? 'bg-primary/5 border-primary/30' : ''}`}
+                  >
+                    <div className={`text-sm font-medium mb-1 ${
+                      isCurrentDay ? 'text-primary' : isCurrentMonthDay ? 'text-white' : 'text-gray-600'
+                    }`}>
+                      {format(day, 'd')}
+                    </div>
+                    <div className="space-y-1">
+                      {dayPosts.slice(0, 3).map((post) => (
+                        <button
+                          key={post.id}
+                          onClick={() => setSelectedPost(post)}
+                          className={`w-full text-left px-2 py-1 rounded text-[10px] text-white truncate hover:opacity-80 transition-opacity ${platformColors[post.platform]}`}
+                        >
+                          {post.scheduledFor && format(parseISO(post.scheduledFor), 'h:mm a')}
+                        </button>
+                      ))}
+                      {dayPosts.length > 3 && (
+                        <p className="text-[10px] text-gray-500 px-2">
+                          +{dayPosts.length - 3} more
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </GlassCard>
 
       {/* Upcoming Posts */}
