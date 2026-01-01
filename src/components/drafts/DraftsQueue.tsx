@@ -21,6 +21,7 @@ import {
   Download,
   FileSpreadsheet,
   Database,
+  Copy,
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -60,12 +61,13 @@ interface DraftCardProps {
   onSchedule: (post: Post) => void;
   onPublish: (post: Post) => void;
   onCrossPost: (post: Post) => void;
+  onDuplicate: (post: Post) => void;
   isSelected?: boolean;
   onSelect?: (id: string) => void;
   showDragHandle?: boolean;
 }
 
-function DraftCard({ post, onEdit, onDelete, onSchedule, onPublish, onCrossPost, isSelected, onSelect, showDragHandle }: DraftCardProps) {
+function DraftCard({ post, onEdit, onDelete, onSchedule, onPublish, onCrossPost, onDuplicate, isSelected, onSelect, showDragHandle }: DraftCardProps) {
   const status = statusConfig[post.status];
   const platform = platformColors[post.platform];
   const platformLabel = platformIcons[post.platform];
@@ -116,6 +118,13 @@ function DraftCard({ post, onEdit, onDelete, onSchedule, onPublish, onCrossPost,
             title="Edit"
           >
             <Edit3 size={16} />
+          </button>
+          <button
+            onClick={() => onDuplicate(post)}
+            className="p-2 rounded-lg hover:bg-primary/10 text-gray-400 hover:text-primary transition-colors"
+            title="Duplicate"
+          >
+            <Copy size={16} />
           </button>
           <button
             onClick={() => onDelete(post.id)}
@@ -792,6 +801,24 @@ export function DraftsQueue() {
     setPosts([...newOrder, ...otherPosts]);
   }, [posts, setPosts]);
 
+  // Duplicate a post
+  const handleDuplicate = useCallback((post: Post) => {
+    addPost({
+      id: crypto.randomUUID(),
+      content: post.content,
+      caption: post.caption,
+      hashtags: [...post.hashtags],
+      platform: post.platform,
+      status: 'draft',
+      imageUrl: post.imageUrl,
+    });
+    addNotification({
+      type: 'success',
+      title: 'Post Duplicated',
+      message: 'Created a copy in drafts',
+    });
+  }, [addPost, addNotification]);
+
   // Bulk action handlers
   const handleBulkSchedule = useCallback(() => {
     setBulkScheduleModal(true);
@@ -1088,6 +1115,7 @@ export function DraftsQueue() {
                   onSchedule={handleSchedule}
                   onPublish={handlePublish}
                   onCrossPost={handleCrossPost}
+                  onDuplicate={handleDuplicate}
                   isSelected={selectedIds.has(post.id)}
                   onSelect={handleSelect}
                   showDragHandle={true}

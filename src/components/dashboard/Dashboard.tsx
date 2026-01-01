@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart,
@@ -31,6 +31,8 @@ import {
   ChevronDown,
   BookTemplate,
   Hash,
+  Search,
+  X,
 } from 'lucide-react';
 import {
   exportPostsToCSV,
@@ -141,6 +143,222 @@ function QuickActionCard({
       </p>
       <p className="text-xs text-gray-500 mt-0.5">{description}</p>
     </button>
+  );
+}
+
+// Quick Search component
+function QuickSearch({
+  posts,
+  templates,
+  hashtagCollections,
+  onNavigate,
+}: {
+  posts: Post[];
+  templates: { id: string; name: string; category: string }[];
+  hashtagCollections: { id: string; name: string; hashtags: string[] }[];
+  onNavigate: (view: 'drafts' | 'templates' | 'hashtags') => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [isOpen]);
+
+  const results = useMemo(() => {
+    if (!query.trim()) return { posts: [], templates: [], hashtags: [] };
+
+    const q = query.toLowerCase();
+    return {
+      posts: posts
+        .filter(p =>
+          (p.content || p.caption || '').toLowerCase().includes(q) ||
+          p.hashtags.some(h => h.toLowerCase().includes(q))
+        )
+        .slice(0, 3),
+      templates: templates
+        .filter(t => t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q))
+        .slice(0, 3),
+      hashtags: hashtagCollections
+        .filter(h =>
+          h.name.toLowerCase().includes(q) ||
+          h.hashtags.some(tag => tag.toLowerCase().includes(q))
+        )
+        .slice(0, 3),
+    };
+  }, [query, posts, templates, hashtagCollections]);
+
+  const hasResults = results.posts.length > 0 || results.templates.length > 0 || results.hashtags.length > 0;
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setIsOpen(false);
+      setQuery('');
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(true)}
+        className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-glass-border rounded-xl hover:border-primary/30 transition-colors text-gray-400 hover:text-white"
+      >
+        <Search size={16} />
+        <span className="text-sm hidden sm:inline">Quick Search</span>
+        <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 bg-white/5 border border-glass-border rounded text-[10px] text-gray-500">
+          /
+        </kbd>
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => {
+                setIsOpen(false);
+                setQuery('');
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-surface border border-glass-border rounded-xl shadow-xl z-50 overflow-hidden"
+            >
+              {/* Search Input */}
+              <div className="flex items-center gap-3 p-3 border-b border-glass-border">
+                <Search size={18} className="text-gray-500" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Search posts, templates, hashtags..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-sm"
+                />
+                {query && (
+                  <button
+                    onClick={() => setQuery('')}
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                  >
+                    <X size={14} className="text-gray-400" />
+                  </button>
+                )}
+              </div>
+
+              {/* Results */}
+              <div className="max-h-80 overflow-y-auto p-2">
+                {!query.trim() ? (
+                  <div className="p-4 text-center text-gray-500 text-sm">
+                    Start typing to search...
+                  </div>
+                ) : !hasResults ? (
+                  <div className="p-4 text-center text-gray-500 text-sm">
+                    No results found for "{query}"
+                  </div>
+                ) : (
+                  <>
+                    {/* Posts Results */}
+                    {results.posts.length > 0 && (
+                      <div className="mb-2">
+                        <p className="text-xs font-medium text-gray-500 uppercase px-2 py-1">
+                          Posts ({results.posts.length})
+                        </p>
+                        {results.posts.map((post) => (
+                          <button
+                            key={post.id}
+                            onClick={() => {
+                              onNavigate('drafts');
+                              setIsOpen(false);
+                              setQuery('');
+                            }}
+                            className="w-full flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-left transition-colors"
+                          >
+                            <FileText size={14} className="text-primary mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-white truncate">
+                                {(post.content || post.caption || '').slice(0, 60)}...
+                              </p>
+                              <p className="text-xs text-gray-500">{post.platform} • {post.status}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Templates Results */}
+                    {results.templates.length > 0 && (
+                      <div className="mb-2">
+                        <p className="text-xs font-medium text-gray-500 uppercase px-2 py-1">
+                          Templates ({results.templates.length})
+                        </p>
+                        {results.templates.map((template) => (
+                          <button
+                            key={template.id}
+                            onClick={() => {
+                              onNavigate('templates');
+                              setIsOpen(false);
+                              setQuery('');
+                            }}
+                            className="w-full flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-left transition-colors"
+                          >
+                            <BookTemplate size={14} className="text-accent-purple mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-white truncate">{template.name}</p>
+                              <p className="text-xs text-gray-500">{template.category}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Hashtag Collections Results */}
+                    {results.hashtags.length > 0 && (
+                      <div className="mb-2">
+                        <p className="text-xs font-medium text-gray-500 uppercase px-2 py-1">
+                          Hashtag Sets ({results.hashtags.length})
+                        </p>
+                        {results.hashtags.map((collection) => (
+                          <button
+                            key={collection.id}
+                            onClick={() => {
+                              onNavigate('hashtags');
+                              setIsOpen(false);
+                              setQuery('');
+                            }}
+                            className="w-full flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-left transition-colors"
+                          >
+                            <Hash size={14} className="text-success mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-white truncate">{collection.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {collection.hashtags.slice(0, 3).map(h => `#${h}`).join(' ')}
+                                {collection.hashtags.length > 3 && ` +${collection.hashtags.length - 3}`}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-2 border-t border-glass-border bg-white/2 text-xs text-gray-500 text-center">
+                Press <kbd className="px-1 py-0.5 bg-white/10 rounded">ESC</kbd> to close
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -368,7 +586,15 @@ export function Dashboard() {
           <h1 className="text-2xl lg:text-3xl font-bold gradient-text mb-2">Growth Hub</h1>
           <p className="text-gray-400 text-sm lg:text-base">Your autonomous social media command center</p>
         </div>
-        <ExportDropdown analytics={analytics} posts={posts} activities={activities} />
+        <div className="flex items-center gap-2">
+          <QuickSearch
+            posts={posts}
+            templates={templates}
+            hashtagCollections={hashtagCollections}
+            onNavigate={setActiveView}
+          />
+          <ExportDropdown analytics={analytics} posts={posts} activities={activities} />
+        </div>
       </div>
 
       {/* Quick Actions */}
