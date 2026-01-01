@@ -485,3 +485,143 @@ export function analyzePost(post: Post): {
     competitiveScore,
   };
 }
+
+// Get optimal posting times for a platform
+export interface OptimalTimeSlot {
+  day: string;
+  dayNum: number;
+  hour: number;
+  timeString: string;
+  reason: string;
+  engagement: 'peak' | 'high' | 'good';
+}
+
+const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+export function getOptimalPostingTimes(platform: Platform): OptimalTimeSlot[] {
+  const config = optimalPostingTimes[platform];
+  const slots: OptimalTimeSlot[] = [];
+
+  // Platform-specific reasons
+  const reasons: Record<Platform, Record<number, string>> = {
+    instagram: {
+      11: 'Lunch break scrolling',
+      13: 'Afternoon engagement peak',
+      19: 'Evening relaxation time',
+      20: 'Prime evening hours',
+    },
+    twitter: {
+      9: 'Morning news check',
+      12: 'Lunch break discussions',
+      17: 'End of workday catch-up',
+      18: 'Evening trending topics',
+    },
+    linkedin: {
+      7: 'Early morning professionals',
+      8: 'Pre-work browsing',
+      12: 'Lunch break networking',
+      17: 'End of business day',
+    },
+    tiktok: {
+      7: 'Morning entertainment',
+      9: 'Mid-morning scroll',
+      12: 'Lunch break videos',
+      15: 'Afternoon break',
+      19: 'Peak evening entertainment',
+    },
+  };
+
+  config.days.forEach((day) => {
+    config.hours.forEach((hour, hourIndex) => {
+      const isPeak = hourIndex === 0 || hourIndex === config.hours.length - 1;
+      const isHigh = !isPeak && hourIndex < 2;
+
+      slots.push({
+        day: dayNames[day],
+        dayNum: day,
+        hour,
+        timeString: `${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`,
+        reason: reasons[platform][hour] || 'Good engagement window',
+        engagement: isPeak ? 'peak' : isHigh ? 'high' : 'good',
+      });
+    });
+  });
+
+  // Sort by engagement quality
+  return slots.sort((a, b) => {
+    const order = { peak: 0, high: 1, good: 2 };
+    return order[a.engagement] - order[b.engagement];
+  });
+}
+
+// Get next optimal posting time from now
+export function getNextOptimalTime(platform: Platform): Date {
+  const config = optimalPostingTimes[platform];
+  const now = new Date();
+  const currentDay = now.getDay();
+  const currentHour = now.getHours();
+
+  // Find the next optimal slot
+  for (let daysAhead = 0; daysAhead < 7; daysAhead++) {
+    const checkDay = (currentDay + daysAhead) % 7;
+
+    if (config.days.includes(checkDay)) {
+      for (const hour of config.hours) {
+        if (daysAhead === 0 && hour <= currentHour) continue;
+
+        const nextTime = new Date(now);
+        nextTime.setDate(now.getDate() + daysAhead);
+        nextTime.setHours(hour, 0, 0, 0);
+        return nextTime;
+      }
+    }
+  }
+
+  // Fallback to tomorrow's first optimal time
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  tomorrow.setHours(config.hours[0], 0, 0, 0);
+  return tomorrow;
+}
+
+// Get platform content tips
+export interface ContentTip {
+  category: 'hook' | 'format' | 'engagement' | 'hashtags' | 'media';
+  tip: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export function getPlatformTips(platform: Platform): ContentTip[] {
+  const tips: Record<Platform, ContentTip[]> = {
+    instagram: [
+      { category: 'hook', tip: 'Start with an attention-grabbing first line - users see only the first 125 characters', priority: 'high' },
+      { category: 'format', tip: 'Use line breaks to make captions scannable', priority: 'medium' },
+      { category: 'engagement', tip: 'End with a question or call-to-action to boost comments', priority: 'high' },
+      { category: 'hashtags', tip: 'Use 5-11 relevant hashtags for optimal reach', priority: 'medium' },
+      { category: 'media', tip: 'Carousel posts get 3x more engagement than single images', priority: 'high' },
+    ],
+    twitter: [
+      { category: 'hook', tip: 'Lead with your most compelling point - tweets get 2 seconds of attention', priority: 'high' },
+      { category: 'format', tip: 'Keep tweets under 100 characters for 17% more engagement', priority: 'medium' },
+      { category: 'engagement', tip: 'Ask questions or create polls to drive replies', priority: 'high' },
+      { category: 'hashtags', tip: 'Use 1-2 relevant hashtags only', priority: 'low' },
+      { category: 'media', tip: 'Tweets with images get 150% more retweets', priority: 'high' },
+    ],
+    linkedin: [
+      { category: 'hook', tip: 'Start with a bold statement or surprising statistic', priority: 'high' },
+      { category: 'format', tip: 'Use "See more" effectively - first 3 lines must hook readers', priority: 'high' },
+      { category: 'engagement', tip: 'Tag relevant connections and companies', priority: 'medium' },
+      { category: 'hashtags', tip: 'Use 3-5 industry-specific hashtags', priority: 'medium' },
+      { category: 'media', tip: 'Native documents get 3x more clicks than external links', priority: 'high' },
+    ],
+    tiktok: [
+      { category: 'hook', tip: 'First 3 seconds are critical - hook viewers immediately', priority: 'high' },
+      { category: 'format', tip: 'Keep captions short (50-100 chars) - focus on the video', priority: 'medium' },
+      { category: 'engagement', tip: 'Use trending sounds and participate in challenges', priority: 'high' },
+      { category: 'hashtags', tip: 'Include #fyp and 3-5 niche hashtags', priority: 'medium' },
+      { category: 'media', tip: 'Vertical video (9:16) is essential for TikTok', priority: 'high' },
+    ],
+  };
+
+  return tips[platform];
+}

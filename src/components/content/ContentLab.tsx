@@ -27,6 +27,10 @@ import {
   Redo2,
   BookTemplate,
   ChevronDown,
+  Clock,
+  Lightbulb,
+  ChevronRight,
+  Zap,
 } from 'lucide-react';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -42,7 +46,7 @@ import {
   initOpenAIClient,
   type ContentVariation,
 } from '@/services/ai';
-import { predictEngagement, suggestHashtags, type EngagementPrediction } from '@/services/predictions';
+import { predictEngagement, suggestHashtags, getNextOptimalTime, getPlatformTips, type EngagementPrediction } from '@/services/predictions';
 import { PerformancePrediction } from './PerformancePrediction';
 import { TemplateVariableModal } from './TemplateVariableModal';
 import { PreflightCheckModal } from './PreflightCheckModal';
@@ -1054,6 +1058,50 @@ export function ContentLab() {
                   {p.label}
                 </button>
               ))}
+            </div>
+          </GlassCard>
+
+          {/* Tips & Best Times */}
+          <GlassCard className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                <Lightbulb size={16} className="text-warning" />
+                {platform.charAt(0).toUpperCase() + platform.slice(1)} Tips
+              </h4>
+            </div>
+
+            {/* Next Best Time */}
+            {(() => {
+              const nextTime = getNextOptimalTime(platform);
+              const isToday = nextTime.toDateString() === new Date().toDateString();
+              return (
+                <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-xl mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                    <Clock size={18} className="text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500">Best time to post</p>
+                    <p className="text-sm font-medium text-white">
+                      {isToday ? 'Today' : nextTime.toLocaleDateString('en-US', { weekday: 'short' })} at{' '}
+                      {nextTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="text-gray-500" />
+                </div>
+              );
+            })()}
+
+            {/* Quick Tips */}
+            <div className="space-y-2">
+              {getPlatformTips(platform)
+                .filter(tip => tip.priority === 'high')
+                .slice(0, 2)
+                .map((tip, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs">
+                    <Zap size={12} className="text-warning mt-0.5 flex-shrink-0" />
+                    <span className="text-gray-400">{tip.tip}</span>
+                  </div>
+                ))}
             </div>
           </GlassCard>
 
