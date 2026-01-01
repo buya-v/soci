@@ -29,6 +29,8 @@ import {
   FileType,
   Database,
   ChevronDown,
+  BookTemplate,
+  Hash,
 } from 'lucide-react';
 import {
   exportPostsToCSV,
@@ -301,7 +303,17 @@ function ExportDropdown({
 export function Dashboard() {
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
   const { data: serverActivities, isLoading: activitiesLoading } = useActivities();
-  const { activities: storeActivities, posts, setActiveView } = useAppStore();
+  const { activities: storeActivities, posts, templates, hashtagCollections, setActiveView } = useAppStore();
+
+  // Get top templates by usage
+  const topTemplates = [...templates]
+    .sort((a, b) => b.usageCount - a.usageCount)
+    .slice(0, 5);
+
+  // Get top hashtag collections by usage
+  const topHashtagCollections = [...hashtagCollections]
+    .sort((a, b) => b.usageCount - a.usageCount)
+    .slice(0, 5);
 
   // Merge store activities with server activities
   const activities = [...storeActivities, ...(serverActivities || [])].slice(0, 10);
@@ -646,6 +658,131 @@ export function Dashboard() {
           )}
         </GlassCard>
       </div>
+
+      {/* Top Templates & Hashtags */}
+      {(topTemplates.length > 0 || topHashtagCollections.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          {/* Top Templates */}
+          <GlassCard className="p-4 lg:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <BookTemplate size={20} className="text-primary" />
+                Top Templates
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveView('templates')}
+              >
+                View All
+              </Button>
+            </div>
+            {topTemplates.length > 0 ? (
+              <div className="space-y-3">
+                {topTemplates.map((template, index) => (
+                  <div
+                    key={template.id}
+                    className="flex items-center justify-between p-3 bg-white/5 rounded-xl"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-lg font-bold text-gray-600 w-6">
+                        #{index + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white truncate">
+                          {template.name}
+                        </p>
+                        <p className="text-xs text-gray-500 capitalize">
+                          {template.category} • {template.platform === 'all' ? 'All platforms' : template.platform}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-primary">
+                        {template.usageCount}
+                      </span>
+                      <p className="text-xs text-gray-500">uses</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <BookTemplate size={32} className="mx-auto text-gray-600 mb-2" />
+                <p className="text-sm text-gray-500">No templates used yet</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => setActiveView('templates')}
+                >
+                  Create Templates
+                </Button>
+              </div>
+            )}
+          </GlassCard>
+
+          {/* Top Hashtag Collections */}
+          <GlassCard className="p-4 lg:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Hash size={20} className="text-accent-purple" />
+                Top Hashtag Sets
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveView('hashtags')}
+              >
+                View All
+              </Button>
+            </div>
+            {topHashtagCollections.length > 0 ? (
+              <div className="space-y-3">
+                {topHashtagCollections.map((collection, index) => (
+                  <div
+                    key={collection.id}
+                    className="flex items-center justify-between p-3 bg-white/5 rounded-xl"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-lg font-bold text-gray-600 w-6">
+                        #{index + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white truncate">
+                          {collection.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {collection.hashtags.length} hashtags • {collection.platform === 'all' ? 'All platforms' : collection.platform}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-accent-purple">
+                        {collection.usageCount}
+                      </span>
+                      <p className="text-xs text-gray-500">uses</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Hash size={32} className="mx-auto text-gray-600 mb-2" />
+                <p className="text-sm text-gray-500">No hashtag sets used yet</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => setActiveView('hashtags')}
+                >
+                  Create Hashtag Sets
+                </Button>
+              </div>
+            )}
+          </GlassCard>
+        </div>
+      )}
 
       {/* Activity Log */}
       <GlassCard className="p-4 lg:p-6">

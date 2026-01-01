@@ -18,6 +18,9 @@ import {
   CheckSquare,
   Square,
   MoreHorizontal,
+  Download,
+  FileSpreadsheet,
+  Database,
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -26,6 +29,7 @@ import {
   prepareForAllPlatforms,
   platformConfigs,
 } from '@/services/publishing';
+import { exportPostsToCSV, exportAllDataToJSON } from '@/services/export';
 import type { Post, Platform, PostStatus } from '@/types';
 
 const platformIcons: Record<Platform, string> = {
@@ -402,10 +406,27 @@ function ScheduleModal({ post, onClose, onSchedule }: ScheduleModalProps) {
 interface CrossPostModalProps {
   post: Post;
   onClose: () => void;
+  onCopyToPlatform: (platform: Platform, content: string, hashtags: string[]) => void;
 }
 
-function CrossPostModal({ post, onClose }: CrossPostModalProps) {
+function CrossPostModal({ post, onClose, onCopyToPlatform }: CrossPostModalProps) {
   const previews = prepareForAllPlatforms(post.content || post.caption || '', post.hashtags);
+  const [copiedPlatforms, setCopiedPlatforms] = useState<Set<Platform>>(new Set());
+
+  const handleCopyToPlatform = (preview: typeof previews[0]) => {
+    if (preview.platform === post.platform) return;
+    onCopyToPlatform(preview.platform, preview.content, preview.hashtags);
+    setCopiedPlatforms(prev => new Set([...prev, preview.platform]));
+  };
+
+  const handleCopyToAll = () => {
+    previews.forEach(preview => {
+      if (preview.platform !== post.platform) {
+        onCopyToPlatform(preview.platform, preview.content, preview.hashtags);
+        setCopiedPlatforms(prev => new Set([...prev, preview.platform]));
+      }
+    });
+  };
 
   return (
     <motion.div
@@ -424,112 +445,149 @@ function CrossPostModal({ post, onClose }: CrossPostModalProps) {
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-white">Cross-Platform Preview</h3>
-            <p className="text-sm text-gray-400">See how your content looks on each platform</p>
+            <h3 className="text-lg font-semibold text-white">Copy to Other Platforms</h3>
+            <p className="text-sm text-gray-400">Preview and copy optimized content to other platforms</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleCopyToAll}
+              className="gap-1"
+            >
+              <Share2 size={14} />
+              Copy to All
+            </Button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {previews.map((preview) => (
-            <div
-              key={preview.platform}
-              className={`p-4 rounded-xl border ${
-                preview.platform === post.platform
-                  ? 'border-primary/50 bg-primary/5'
-                  : 'border-glass-border bg-white/5'
-              }`}
-            >
-              {/* Platform Header */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${platformColors[preview.platform]}`}>
-                    {platformIcons[preview.platform]}
-                  </span>
-                  <span className="font-medium text-white">{platformConfigs[preview.platform].name}</span>
+          {previews.map((preview) => {
+            const isOriginal = preview.platform === post.platform;
+            const isCopied = copiedPlatforms.has(preview.platform);
+
+            return (
+              <div
+                key={preview.platform}
+                className={`p-4 rounded-xl border ${
+                  isOriginal
+                    ? 'border-primary/50 bg-primary/5'
+                    : isCopied
+                    ? 'border-success/50 bg-success/5'
+                    : 'border-glass-border bg-white/5'
+                }`}
+              >
+                {/* Platform Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${platformColors[preview.platform]}`}>
+                      {platformIcons[preview.platform]}
+                    </span>
+                    <span className="font-medium text-white">{platformConfigs[preview.platform].name}</span>
+                  </div>
+                  {isOriginal ? (
+                    <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded">Original</span>
+                  ) : isCopied ? (
+                    <span className="text-xs text-success bg-success/10 px-2 py-0.5 rounded flex items-center gap-1">
+                      <Check size={10} />
+                      Copied
+                    </span>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopyToPlatform(preview)}
+                      className="text-xs h-6 px-2"
+                    >
+                      Copy
+                    </Button>
+                  )}
                 </div>
-                {preview.platform === post.platform && (
-                  <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded">Original</span>
-                )}
-              </div>
 
-              {/* Character Count */}
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-500">
-                  {preview.characterCount} / {preview.maxCharacters} characters
-                </span>
-                {preview.truncated && (
-                  <span className="text-xs text-warning">Truncated</span>
-                )}
-              </div>
-
-              {/* Character Progress Bar */}
-              <div className="w-full h-1 bg-white/10 rounded-full mb-3">
-                <div
-                  className={`h-full rounded-full transition-all ${
-                    preview.characterCount / preview.maxCharacters > 0.9
-                      ? 'bg-warning'
-                      : 'bg-primary'
-                  }`}
-                  style={{
-                    width: `${Math.min(100, (preview.characterCount / preview.maxCharacters) * 100)}%`,
-                  }}
-                />
-              </div>
-
-              {/* Content Preview */}
-              <p className="text-sm text-gray-300 line-clamp-3 mb-3">{preview.content}</p>
-
-              {/* Hashtags */}
-              <div className="flex flex-wrap gap-1 mb-3">
-                {preview.hashtags.map((tag, i) => (
-                  <span key={i} className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                    #{tag}
-                  </span>
-                ))}
-                {preview.hashtags.length < post.hashtags.length && (
+                {/* Character Count */}
+                <div className="flex items-center justify-between mb-2">
                   <span className="text-xs text-gray-500">
-                    +{post.hashtags.length - preview.hashtags.length} hidden
+                    {preview.characterCount} / {preview.maxCharacters} characters
                   </span>
+                  {preview.truncated && (
+                    <span className="text-xs text-warning">Truncated</span>
+                  )}
+                </div>
+
+                {/* Character Progress Bar */}
+                <div className="w-full h-1 bg-white/10 rounded-full mb-3">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      preview.characterCount / preview.maxCharacters > 0.9
+                        ? 'bg-warning'
+                        : 'bg-primary'
+                    }`}
+                    style={{
+                      width: `${Math.min(100, (preview.characterCount / preview.maxCharacters) * 100)}%`,
+                    }}
+                  />
+                </div>
+
+                {/* Content Preview */}
+                <p className="text-sm text-gray-300 line-clamp-3 mb-3">{preview.content}</p>
+
+                {/* Hashtags */}
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {preview.hashtags.map((tag, i) => (
+                    <span key={i} className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                      #{tag}
+                    </span>
+                  ))}
+                  {preview.hashtags.length < post.hashtags.length && (
+                    <span className="text-xs text-gray-500">
+                      +{post.hashtags.length - preview.hashtags.length} hidden
+                    </span>
+                  )}
+                </div>
+
+                {/* Warnings */}
+                {preview.warnings.length > 0 && (
+                  <div className="space-y-1 mb-2">
+                    {preview.warnings.map((warning, i) => (
+                      <div key={i} className="flex items-start gap-1.5 text-xs text-warning">
+                        <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
+                        <span>{warning}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Optimizations */}
+                {preview.optimizations.length > 0 && (
+                  <div className="space-y-1">
+                    {preview.optimizations.map((opt, i) => (
+                      <div key={i} className="flex items-start gap-1.5 text-xs text-accent-purple">
+                        <Lightbulb size={12} className="mt-0.5 flex-shrink-0" />
+                        <span>{opt}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-
-              {/* Warnings */}
-              {preview.warnings.length > 0 && (
-                <div className="space-y-1 mb-2">
-                  {preview.warnings.map((warning, i) => (
-                    <div key={i} className="flex items-start gap-1.5 text-xs text-warning">
-                      <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
-                      <span>{warning}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Optimizations */}
-              {preview.optimizations.length > 0 && (
-                <div className="space-y-1">
-                  {preview.optimizations.map((opt, i) => (
-                    <div key={i} className="flex items-start gap-1.5 text-xs text-accent-purple">
-                      <Lightbulb size={12} className="mt-0.5 flex-shrink-0" />
-                      <span>{opt}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        <div className="mt-6 pt-4 border-t border-glass-border">
-          <p className="text-xs text-gray-500 text-center">
-            Multi-platform publishing coming soon. Currently publishing to {platformConfigs[post.platform].name} only.
+        <div className="mt-6 pt-4 border-t border-glass-border flex items-center justify-between">
+          <p className="text-xs text-gray-500">
+            {copiedPlatforms.size > 0
+              ? `${copiedPlatforms.size} platform${copiedPlatforms.size !== 1 ? 's' : ''} copied to drafts`
+              : 'Click "Copy" to create drafts for other platforms'}
           </p>
+          <Button variant="secondary" onClick={onClose}>
+            Done
+          </Button>
         </div>
       </motion.div>
     </motion.div>
@@ -620,8 +678,71 @@ function BulkActionsDropdown({
   );
 }
 
+// Export dropdown
+function ExportDropdown({ posts, onNotify }: { posts: Post[]; onNotify: (msg: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleExportCSV = () => {
+    exportPostsToCSV(posts);
+    onNotify('Exported posts to CSV');
+    setIsOpen(false);
+  };
+
+  const handleExportJSON = () => {
+    exportAllDataToJSON({ posts, activities: [] });
+    onNotify('Exported posts to JSON');
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2"
+      >
+        <Download size={16} />
+        <span className="hidden sm:inline">Export</span>
+      </Button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="absolute right-0 top-full mt-2 w-48 bg-surface border border-glass-border rounded-xl shadow-xl z-50 overflow-hidden"
+            >
+              <div className="p-2">
+                <button
+                  onClick={handleExportCSV}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                >
+                  <FileSpreadsheet size={16} className="text-success" />
+                  Export as CSV
+                </button>
+                <button
+                  onClick={handleExportJSON}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                >
+                  <Database size={16} className="text-info" />
+                  Export as JSON
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export function DraftsQueue() {
-  const { posts, setPosts, updatePost, deletePost, addNotification, addActivity } = useAppStore();
+  const { posts, setPosts, addPost, updatePost, deletePost, addNotification, addActivity } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [filterPlatform, setFilterPlatform] = useState<Platform | 'all'>('all');
@@ -773,6 +894,23 @@ export function DraftsQueue() {
     setCrossPostingPost(post);
   };
 
+  const handleCopyToPlatform = useCallback((platform: Platform, content: string, hashtags: string[]) => {
+    addPost({
+      id: crypto.randomUUID(),
+      content,
+      caption: content,
+      hashtags,
+      platform,
+      status: 'draft',
+      imageUrl: crossPostingPost?.imageUrl,
+    });
+    addNotification({
+      type: 'success',
+      title: 'Draft Created',
+      message: `Content copied to ${platform} drafts`,
+    });
+  }, [addPost, addNotification, crossPostingPost]);
+
   const handleConfirmSchedule = (date: Date) => {
     if (schedulingPost) {
       updatePost(schedulingPost.id, {
@@ -829,6 +967,10 @@ export function DraftsQueue() {
           <p className="text-gray-400">Manage your drafts and scheduled posts</p>
         </div>
         <div className="flex items-center gap-3">
+          <ExportDropdown
+            posts={filteredPosts}
+            onNotify={(msg) => addNotification({ type: 'success', title: 'Export Complete', message: msg })}
+          />
           <BulkActionsDropdown
             selectedCount={selectedIds.size}
             onScheduleAll={handleBulkSchedule}
@@ -994,6 +1136,7 @@ export function DraftsQueue() {
           <CrossPostModal
             post={crossPostingPost}
             onClose={() => setCrossPostingPost(null)}
+            onCopyToPlatform={handleCopyToPlatform}
           />
         )}
       </AnimatePresence>

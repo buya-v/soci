@@ -44,6 +44,8 @@ import {
 } from '@/services/ai';
 import { predictEngagement, suggestHashtags, type EngagementPrediction } from '@/services/predictions';
 import { PerformancePrediction } from './PerformancePrediction';
+import { TemplateVariableModal } from './TemplateVariableModal';
+import { PreflightCheckModal } from './PreflightCheckModal';
 import type { Platform, Persona, ContentTemplate, HashtagCollection } from '@/types';
 
 const toneOptions: Persona['tone'][] = ['professional', 'casual', 'witty', 'inspirational'];
@@ -407,6 +409,8 @@ export function ContentLab() {
   const [suggestedHashtags, setSuggestedHashtags] = useState<string[]>([]);
   const [showTemplatesPicker, setShowTemplatesPicker] = useState(false);
   const [showHashtagsPicker, setShowHashtagsPicker] = useState(false);
+  const [pendingTemplate, setPendingTemplate] = useState<ContentTemplate | null>(null);
+  const [showPreflightCheck, setShowPreflightCheck] = useState(false);
 
   // Undo/redo for caption editing
   const {
@@ -533,21 +537,44 @@ export function ContentLab() {
     (c) => c.platform === 'all' || c.platform === platform
   );
 
-  // Apply a template
+  // Check if template has variables
+  const hasTemplateVariables = (template: ContentTemplate): boolean => {
+    return /\{\{\w+\}\}/.test(template.content);
+  };
+
+  // Apply a template - show modal if has variables, otherwise apply directly
   const handleApplyTemplate = (template: ContentTemplate) => {
-    const content = template.content;
+    setShowTemplatesPicker(false);
+    if (hasTemplateVariables(template)) {
+      // Show modal to fill in variables
+      setPendingTemplate(template);
+    } else {
+      // Apply directly
+      applyTemplateContent(template.content, [...template.hashtags], template);
+    }
+  };
+
+  // Actually apply the template content (after variable substitution or directly)
+  const applyTemplateContent = (content: string, hashtags: string[], template: ContentTemplate) => {
     setGeneratedPost({
       caption: content,
-      hashtags: [...template.hashtags],
+      hashtags,
     });
     resetCaptionHistory(content);
     incrementTemplateUsage(template.id);
-    setShowTemplatesPicker(false);
     addNotification({
       type: 'success',
       title: 'Template Applied',
-      message: `"${template.name}" loaded. Edit variables as needed.`,
+      message: `"${template.name}" applied successfully.`,
     });
+  };
+
+  // Handle modal apply
+  const handleTemplateModalApply = (content: string, hashtags: string[]) => {
+    if (pendingTemplate) {
+      applyTemplateContent(content, hashtags, pendingTemplate);
+      setPendingTemplate(null);
+    }
   };
 
   // Apply hashtag collection
@@ -757,7 +784,14 @@ export function ContentLab() {
     });
   };
 
+  // Open preflight check before saving
   const handleSchedulePost = () => {
+    if (!generatedPost) return;
+    setShowPreflightCheck(true);
+  };
+
+  // Actually save the post after preflight check passes
+  const handleConfirmSave = () => {
     if (!generatedPost) return;
     addPost({
       id: crypto.randomUUID(),
@@ -768,10 +802,11 @@ export function ContentLab() {
       status: 'draft',
       imageUrl: generatedPost.imageUrl,
     });
+    setShowPreflightCheck(false);
     addNotification({
       type: 'success',
       title: 'Post Saved',
-      message: 'Post added to your drafts',
+      message: 'Post added to your drafts queue',
     });
   };
 
@@ -897,9 +932,10 @@ export function ContentLab() {
                           <span className="text-[10px] text-gray-600 bg-white/5 px-1.5 py-0.5 rounded">
                             {template.category}
                           </span>
-                          {template.variables.length > 0 && (
-                            <span className="text-[10px] text-purple-400">
-                              {template.variables.length} variable{template.variables.length !== 1 ? 's' : ''}
+                          {hasTemplateVariables(template) && (
+                            <span className="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <Sparkles size={10} />
+                              {template.variables.length || 'Has'} variable{template.variables.length !== 1 ? 's' : ''}
                             </span>
                           )}
                         </div>
@@ -1432,6 +1468,29 @@ export function ContentLab() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Template Variable Modal */}
+          {pendingTemplate && (
+            <TemplateVariableModal
+              template={pendingTemplate}
+              isOpen={!!pendingTemplate}
+              onClose={() => setPendingTemplate(null)}
+              onApply={handleTemplateModalApply}
+            />
+          )}
+
+          {/* Pre-flight Check Modal */}
+          {generatedPost && (
+            <PreflightCheckModal
+              isOpen={showPreflightCheck}
+              onClose={() => setShowPreflightCheck(false)}
+              onConfirm={handleConfirmSave}
+              platform={platform}
+              caption={generatedPost.caption}
+              hashtags={generatedPost.hashtags}
+              hasImage={!!generatedPost.imageUrl}
+            />
+          )}
         </div>
       </div>
     </motion.div>
