@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
   FileText,
@@ -22,6 +22,8 @@ import {
   FileSpreadsheet,
   Database,
   Copy,
+  BookTemplate,
+  Sparkles,
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -31,7 +33,7 @@ import {
   platformConfigs,
 } from '@/services/publishing';
 import { exportPostsToCSV, exportAllDataToJSON } from '@/services/export';
-import type { Post, Platform, PostStatus } from '@/types';
+import type { Post, Platform, PostStatus, ContentTemplate } from '@/types';
 
 const platformIcons: Record<Platform, string> = {
   twitter: 'X',
@@ -611,13 +613,17 @@ function BulkActionsDropdown({
   onScheduleAll,
   onPublishAll,
   onDeleteAll,
+  onApplyTemplate,
   onClearSelection,
+  hasTemplates,
 }: {
   selectedCount: number;
   onScheduleAll: () => void;
   onPublishAll: () => void;
   onDeleteAll: () => void;
+  onApplyTemplate: () => void;
   onClearSelection: () => void;
+  hasTemplates: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -648,6 +654,15 @@ function BulkActionsDropdown({
               className="absolute right-0 top-full mt-2 w-48 bg-surface border border-glass-border rounded-xl shadow-xl z-50 overflow-hidden"
             >
               <div className="p-2">
+                {hasTemplates && (
+                  <button
+                    onClick={() => { onApplyTemplate(); setIsOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                  >
+                    <BookTemplate size={16} className="text-accent-purple" />
+                    Apply Template
+                  </button>
+                )}
                 <button
                   onClick={() => { onScheduleAll(); setIsOpen(false); }}
                   className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
@@ -750,8 +765,150 @@ function ExportDropdown({ posts, onNotify }: { posts: Post[]; onNotify: (msg: st
   );
 }
 
+// Bulk Template Application Modal
+interface BulkTemplateModalProps {
+  templates: ContentTemplate[];
+  selectedCount: number;
+  onClose: () => void;
+  onApply: (template: ContentTemplate) => void;
+}
+
+function BulkTemplateModal({ templates, selectedCount, onClose, onApply }: BulkTemplateModalProps) {
+  const [selectedTemplate, setSelectedTemplate] = useState<ContentTemplate | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredTemplates = useMemo(() => {
+    if (!searchQuery.trim()) return templates;
+    const q = searchQuery.toLowerCase();
+    return templates.filter(t =>
+      t.name.toLowerCase().includes(q) ||
+      t.category.toLowerCase().includes(q)
+    );
+  }, [templates, searchQuery]);
+
+  const handleApply = () => {
+    if (selectedTemplate) {
+      onApply(selectedTemplate);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="glass-panel rounded-2xl p-6 w-full max-w-lg border border-glass-border max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <BookTemplate size={20} className="text-accent-purple" />
+              Apply Template to {selectedCount} Posts
+            </h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Selected content will be replaced with template content
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="relative mb-4">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search templates..."
+            className="w-full bg-white/5 border border-glass-border rounded-xl py-2.5 pl-10 pr-4 text-white placeholder-gray-500 focus:border-primary transition-colors text-sm"
+          />
+        </div>
+
+        {/* Template List */}
+        <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
+          {filteredTemplates.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <BookTemplate size={32} className="mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No templates found</p>
+            </div>
+          ) : (
+            filteredTemplates.map((template) => (
+              <button
+                key={template.id}
+                onClick={() => setSelectedTemplate(template)}
+                className={`w-full p-4 rounded-xl border text-left transition-all ${
+                  selectedTemplate?.id === template.id
+                    ? 'border-primary bg-primary/10'
+                    : 'border-glass-border hover:border-primary/30 bg-white/5 hover:bg-white/10'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-medium text-white">{template.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] text-gray-500 bg-white/5 px-1.5 py-0.5 rounded capitalize">
+                        {template.category}
+                      </span>
+                      <span className="text-[10px] text-gray-500 bg-white/5 px-1.5 py-0.5 rounded capitalize">
+                        {template.platform}
+                      </span>
+                    </div>
+                  </div>
+                  {selectedTemplate?.id === template.id && (
+                    <Check size={16} className="text-primary" />
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 line-clamp-2">{template.content}</p>
+                {template.hashtags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {template.hashtags.slice(0, 3).map((tag) => (
+                      <span key={tag} className="text-[10px] text-primary">#{tag}</span>
+                    ))}
+                    {template.hashtags.length > 3 && (
+                      <span className="text-[10px] text-gray-500">+{template.hashtags.length - 3}</span>
+                    )}
+                  </div>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 pt-4 mt-4 border-t border-glass-border">
+          <Button variant="secondary" onClick={onClose} className="flex-1">
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleApply}
+            className="flex-1"
+            disabled={!selectedTemplate}
+          >
+            <Sparkles size={16} className="mr-1" />
+            Apply to {selectedCount} Posts
+          </Button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export function DraftsQueue() {
-  const { posts, setPosts, addPost, updatePost, deletePost, addNotification, addActivity } = useAppStore();
+  const { posts, setPosts, addPost, updatePost, deletePost, addNotification, addActivity, templates, incrementTemplateUsage } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [filterPlatform, setFilterPlatform] = useState<Platform | 'all'>('all');
@@ -760,6 +917,7 @@ export function DraftsQueue() {
   const [crossPostingPost, setCrossPostingPost] = useState<Post | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkScheduleModal, setBulkScheduleModal] = useState(false);
+  const [bulkTemplateModal, setBulkTemplateModal] = useState(false);
 
   const filteredPosts = posts.filter(post => {
     const matchesSearch = (post.content || post.caption || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -885,6 +1043,33 @@ export function DraftsQueue() {
     setSelectedIds(new Set());
   }, [selectedIds, deletePost, addNotification]);
 
+  // Bulk template application
+  const handleBulkApplyTemplate = useCallback((template: ContentTemplate) => {
+    const selectedPosts = posts.filter(p => selectedIds.has(p.id));
+    selectedPosts.forEach(post => {
+      updatePost(post.id, {
+        content: template.content,
+        caption: template.content,
+        hashtags: [...template.hashtags],
+      });
+    });
+    incrementTemplateUsage(template.id);
+    addNotification({
+      type: 'success',
+      title: 'Template Applied',
+      message: `Applied "${template.name}" to ${selectedPosts.length} posts`,
+    });
+    addActivity({
+      id: crypto.randomUUID(),
+      action: 'Bulk Template Apply',
+      description: `Applied "${template.name}" to ${selectedPosts.length} posts`,
+      timestamp: new Date().toISOString(),
+      status: 'success',
+    });
+    setSelectedIds(new Set());
+    setBulkTemplateModal(false);
+  }, [posts, selectedIds, updatePost, incrementTemplateUsage, addNotification, addActivity]);
+
   const draftCount = posts.filter(p => p.status === 'draft').length;
   const scheduledCount = posts.filter(p => p.status === 'scheduled').length;
   const publishedCount = posts.filter(p => p.status === 'published').length;
@@ -1003,7 +1188,9 @@ export function DraftsQueue() {
             onScheduleAll={handleBulkSchedule}
             onPublishAll={handleBulkPublish}
             onDeleteAll={handleBulkDelete}
+            onApplyTemplate={() => setBulkTemplateModal(true)}
             onClearSelection={handleClearSelection}
+            hasTemplates={templates.length > 0}
           />
         </div>
       </div>
@@ -1165,6 +1352,18 @@ export function DraftsQueue() {
             post={crossPostingPost}
             onClose={() => setCrossPostingPost(null)}
             onCopyToPlatform={handleCopyToPlatform}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Bulk Template Modal */}
+      <AnimatePresence>
+        {bulkTemplateModal && (
+          <BulkTemplateModal
+            templates={templates}
+            selectedCount={selectedIds.size}
+            onClose={() => setBulkTemplateModal(false)}
+            onApply={handleBulkApplyTemplate}
           />
         )}
       </AnimatePresence>
