@@ -61,6 +61,7 @@ const platformOptions: { id: Platform; label: string }[] = [
   { id: 'twitter', label: 'Twitter' },
   { id: 'linkedin', label: 'LinkedIn' },
   { id: 'tiktok', label: 'TikTok' },
+  { id: 'facebook', label: 'Facebook' },
 ];
 
 const platformCharLimits: Record<Platform, { caption: number; hashtags: number }> = {
@@ -68,6 +69,7 @@ const platformCharLimits: Record<Platform, { caption: number; hashtags: number }
   twitter: { caption: 280, hashtags: 5 },
   linkedin: { caption: 3000, hashtags: 5 },
   tiktok: { caption: 150, hashtags: 10 },
+  facebook: { caption: 63206, hashtags: 10 },
 };
 
 interface GeneratedPost {

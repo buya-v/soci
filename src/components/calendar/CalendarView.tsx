@@ -45,6 +45,7 @@ const platformColors: Record<Platform, string> = {
   linkedin: 'bg-blue-700',
   instagram: 'bg-pink-500',
   tiktok: 'bg-gray-700',
+  facebook: 'bg-blue-600',
 };
 
 const platformLabels: Record<Platform, string> = {
@@ -52,6 +53,7 @@ const platformLabels: Record<Platform, string> = {
   linkedin: 'LinkedIn',
   instagram: 'Instagram',
   tiktok: 'TikTok',
+  facebook: 'Facebook',
 };
 
 interface ScheduleModalProps {

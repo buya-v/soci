@@ -37,6 +37,10 @@ const optimalPostingTimes: Record<Platform, { days: number[]; hours: number[] }>
     days: [1, 2, 3, 4, 5, 6, 0], // All week
     hours: [7, 9, 12, 15, 19], // Morning and afternoon peaks
   },
+  facebook: {
+    days: [1, 2, 3, 4, 5, 6, 0], // All week, slightly better mid-week
+    hours: [9, 11, 13, 15, 19, 20], // Morning, lunch, afternoon, evening
+  },
 };
 
 // Character limits that perform well
@@ -45,6 +49,7 @@ const optimalCharacterRanges: Record<Platform, { min: number; max: number; ideal
   twitter: { min: 71, max: 100, ideal: 71 },
   linkedin: { min: 150, max: 300, ideal: 200 },
   tiktok: { min: 20, max: 100, ideal: 50 },
+  facebook: { min: 80, max: 250, ideal: 120 },
 };
 
 // Hashtag recommendations per platform
@@ -53,6 +58,7 @@ const hashtagCounts: Record<Platform, { min: number; max: number; ideal: number 
   twitter: { min: 1, max: 3, ideal: 2 },
   linkedin: { min: 3, max: 5, ideal: 3 },
   tiktok: { min: 3, max: 5, ideal: 4 },
+  facebook: { min: 1, max: 5, ideal: 2 },
 };
 
 // Engagement trigger words
@@ -421,6 +427,10 @@ export function suggestHashtags(content: string, platform: Platform, existingHas
       'fyp', 'foryou', 'viral', 'trending', 'foryoupage',
       'tiktok', 'funny', 'duet', 'trend', 'viral',
     ],
+    facebook: [
+      'community', 'family', 'friends', 'love', 'life',
+      'motivation', 'inspiration', 'business', 'success', 'happy',
+    ],
   };
 
   // Content-based keyword extraction (simple version)
@@ -529,6 +539,14 @@ export function getOptimalPostingTimes(platform: Platform): OptimalTimeSlot[] {
       15: 'Afternoon break',
       19: 'Peak evening entertainment',
     },
+    facebook: {
+      9: 'Morning coffee scrolling',
+      11: 'Late morning check-in',
+      13: 'Lunch break sharing',
+      15: 'Afternoon engagement',
+      19: 'Family time browsing',
+      20: 'Evening community activity',
+    },
   };
 
   config.days.forEach((day) => {
@@ -621,6 +639,13 @@ export function getPlatformTips(platform: Platform): ContentTip[] {
       { category: 'hashtags', tip: 'Include #fyp and 3-5 niche hashtags', priority: 'medium' },
       { category: 'media', tip: 'Vertical video (9:16) is essential for TikTok', priority: 'high' },
     ],
+    facebook: [
+      { category: 'hook', tip: 'Start with a relatable statement that encourages sharing', priority: 'high' },
+      { category: 'format', tip: 'Keep posts between 80-250 characters for best engagement', priority: 'medium' },
+      { category: 'engagement', tip: 'Ask questions and encourage tagging friends', priority: 'high' },
+      { category: 'hashtags', tip: 'Use 1-2 hashtags maximum - Facebook users prefer less', priority: 'low' },
+      { category: 'media', tip: 'Native video gets 10x more reach than YouTube links', priority: 'high' },
+    ],
   };
 
   return tips[platform];
@@ -666,6 +691,14 @@ const contentIdeasByPlatform: Record<Platform, ContentIdea[]> = {
     { title: 'Stitch/Duet Response', description: 'React to trending content in your niche', format: 'reel', engagement: 'high' },
     { title: 'Quick Tutorial', description: '15-30 second how-to with text overlay', format: 'reel', engagement: 'high' },
     { title: 'Story Time', description: 'Share an interesting personal story', format: 'reel', engagement: 'medium' },
+  ],
+  facebook: [
+    { title: 'Community Poll', description: 'Ask your audience for opinions on a topic', format: 'post', engagement: 'high' },
+    { title: 'Shareable Quote', description: 'Inspirational or relatable quote with image', format: 'post', engagement: 'high' },
+    { title: 'Live Q&A', description: 'Go live to answer questions from your community', format: 'reel', engagement: 'high' },
+    { title: 'Throwback Story', description: 'Share a nostalgic or meaningful memory', format: 'post', engagement: 'medium' },
+    { title: 'Event Announcement', description: 'Promote upcoming events or milestones', format: 'post', engagement: 'medium' },
+    { title: 'User Spotlight', description: 'Feature and celebrate community members', format: 'post', engagement: 'high' },
   ],
 };
 

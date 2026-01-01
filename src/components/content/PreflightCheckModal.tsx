@@ -80,6 +80,15 @@ const platformConfig: Record<Platform, {
     recommendedHashtags: { min: 3, max: 8 },
     optimalCaptionLength: { min: 50, max: 100 },
   },
+  facebook: {
+    name: 'Facebook',
+    captionLimit: 63206,
+    hashtagLimit: 10,
+    supportsLinks: true,
+    supportsVideo: true,
+    recommendedHashtags: { min: 1, max: 3 },
+    optimalCaptionLength: { min: 80, max: 250 },
+  },
 };
 
 export function PreflightCheckModal({

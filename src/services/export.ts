@@ -7,6 +7,7 @@ const platformLabels: Record<Platform, string> = {
   linkedin: 'LinkedIn',
   instagram: 'Instagram',
   tiktok: 'TikTok',
+  facebook: 'Facebook',
 };
 
 // Convert data to CSV format

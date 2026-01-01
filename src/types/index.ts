@@ -56,7 +56,7 @@ export interface Post {
   language?: Language; // Per-post language override
 }
 
-export type Platform = 'twitter' | 'linkedin' | 'instagram' | 'tiktok';
+export type Platform = 'twitter' | 'linkedin' | 'instagram' | 'tiktok' | 'facebook';
 export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed';
 
 // Language types for multi-language content

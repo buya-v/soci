@@ -47,6 +47,10 @@ const platformConfig: Record<Platform, { maxLength: number; style: string }> = {
     maxLength: 300,
     style: 'trendy, casual, uses gen-z language, hook in first line, emoji-heavy',
   },
+  facebook: {
+    maxLength: 63206,
+    style: 'conversational, community-focused, shareable, uses emojis moderately, encourages engagement and discussion',
+  },
 };
 
 // Tone configurations
@@ -305,6 +309,7 @@ Respond with just the image prompt, nothing else. Keep it under 200 characters.`
     twitter: '1792x1024',
     linkedin: '1792x1024',
     tiktok: '1024x1792',
+    facebook: '1792x1024',
   };
 
   return generateImage({
@@ -352,7 +357,7 @@ Respond with this exact JSON structure:
   "bestPlatforms": ["twitter", "linkedin"]
 }
 
-relevanceScore should be 0-100. Only include platforms from: twitter, instagram, linkedin, tiktok`,
+relevanceScore should be 0-100. Only include platforms from: twitter, instagram, linkedin, tiktok, facebook`,
       },
     ],
     system: 'You are a social media trend analyst. Respond with valid JSON only.',

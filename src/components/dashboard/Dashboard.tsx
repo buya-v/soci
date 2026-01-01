@@ -113,6 +113,7 @@ const platformColors: Record<Platform, string> = {
   linkedin: '#0A66C2',
   instagram: '#E4405F',
   tiktok: '#000000',
+  facebook: '#1877F2',
 };
 
 const platformLabels: Record<Platform, string> = {
@@ -120,6 +121,7 @@ const platformLabels: Record<Platform, string> = {
   linkedin: 'LinkedIn',
   instagram: 'Instagram',
   tiktok: 'TikTok',
+  facebook: 'Facebook',
 };
 
 // Quick action card component

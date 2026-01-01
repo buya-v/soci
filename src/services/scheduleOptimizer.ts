@@ -41,6 +41,10 @@ const platformOptimalHours: Record<Platform, { weekday: number[]; weekend: numbe
     weekday: [7, 9, 12, 15, 19, 21, 22], // Multiple peaks throughout day
     weekend: [9, 10, 11, 14, 15, 19, 20, 21],
   },
+  facebook: {
+    weekday: [9, 11, 13, 15, 19, 20], // Morning, lunch, afternoon, evening
+    weekend: [10, 11, 12, 13, 14, 19, 20],
+  },
 };
 
 // Day quality scores (0 = Sunday, 6 = Saturday)
@@ -49,6 +53,7 @@ const dayQualityScores: Record<Platform, Record<number, number>> = {
   twitter: { 0: 60, 1: 90, 2: 95, 3: 90, 4: 85, 5: 80, 6: 65 },
   linkedin: { 0: 20, 1: 95, 2: 100, 3: 95, 4: 90, 5: 70, 6: 25 },
   tiktok: { 0: 85, 1: 80, 2: 85, 3: 90, 4: 95, 5: 90, 6: 88 },
+  facebook: { 0: 80, 1: 85, 2: 90, 3: 95, 4: 90, 5: 85, 6: 82 },
 };
 
 // Hour quality modifiers
@@ -95,6 +100,14 @@ const slotReasons: Record<Platform, Record<number, string>> = {
     19: 'Prime evening viewing',
     21: 'Night owl content',
     22: 'Late night viral hour',
+  },
+  facebook: {
+    9: 'Morning coffee scrolling',
+    11: 'Late morning check-in',
+    13: 'Lunch break sharing',
+    15: 'Afternoon engagement',
+    19: 'Family time browsing',
+    20: 'Evening community activity',
   },
 };
 
@@ -145,6 +158,7 @@ export function getOptimalSlotsForDay(date: Date, platforms: Platform[]): DaySch
     linkedin: null,
     instagram: null,
     tiktok: null,
+    facebook: null,
   };
 
   // Generate slots for each platform and hour
@@ -192,7 +206,7 @@ export function getOptimalSlotsForDay(date: Date, platforms: Platform[]): DaySch
 // Generate week schedule with optimal times
 export function getWeekSchedule(
   startDate: Date,
-  platforms: Platform[] = ['instagram', 'twitter', 'linkedin', 'tiktok']
+  platforms: Platform[] = ['instagram', 'twitter', 'linkedin', 'tiktok', 'facebook']
 ): WeekSchedule {
   const days: DaySchedule[] = [];
   const allSlots: OptimalSlot[] = [];
@@ -357,6 +371,7 @@ export const platformEmojis: Record<Platform, string> = {
   twitter: '🐦',
   linkedin: '💼',
   tiktok: '🎵',
+  facebook: '👥',
 };
 
 // Format time slot for display

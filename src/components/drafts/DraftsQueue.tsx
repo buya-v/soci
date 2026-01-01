@@ -40,6 +40,7 @@ const platformIcons: Record<Platform, string> = {
   linkedin: 'in',
   instagram: 'IG',
   tiktok: 'TT',
+  facebook: 'FB',
 };
 
 const platformColors: Record<Platform, string> = {
@@ -47,6 +48,7 @@ const platformColors: Record<Platform, string> = {
   linkedin: 'bg-blue-600 text-white',
   instagram: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white',
   tiktok: 'bg-black text-white',
+  facebook: 'bg-blue-500 text-white',
 };
 
 const statusConfig: Record<PostStatus, { label: string; color: string }> = {

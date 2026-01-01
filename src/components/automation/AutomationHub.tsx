@@ -63,6 +63,7 @@ function PlatformCard({ credential }: { credential: PlatformCredential }) {
     twitter: 'Twitter / X',
     linkedin: 'LinkedIn',
     tiktok: 'TikTok',
+    facebook: 'Facebook',
   };
 
   return (
