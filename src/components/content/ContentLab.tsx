@@ -25,6 +25,8 @@ import {
   Play,
   Undo2,
   Redo2,
+  BookTemplate,
+  ChevronDown,
 } from 'lucide-react';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -42,7 +44,7 @@ import {
 } from '@/services/ai';
 import { predictEngagement, suggestHashtags, type EngagementPrediction } from '@/services/predictions';
 import { PerformancePrediction } from './PerformancePrediction';
-import type { Platform, Persona } from '@/types';
+import type { Platform, Persona, ContentTemplate, HashtagCollection } from '@/types';
 
 const toneOptions: Persona['tone'][] = ['professional', 'casual', 'witty', 'inspirational'];
 const platformOptions: { id: Platform; label: string }[] = [
@@ -51,6 +53,13 @@ const platformOptions: { id: Platform; label: string }[] = [
   { id: 'linkedin', label: 'LinkedIn' },
   { id: 'tiktok', label: 'TikTok' },
 ];
+
+const platformCharLimits: Record<Platform, { caption: number; hashtags: number }> = {
+  instagram: { caption: 2200, hashtags: 30 },
+  twitter: { caption: 280, hashtags: 5 },
+  linkedin: { caption: 3000, hashtags: 5 },
+  tiktok: { caption: 150, hashtags: 10 },
+};
 
 interface GeneratedPost {
   caption: string;
@@ -367,7 +376,18 @@ function TikTokMockup({ post, username = 'soci_ai' }: MockupProps) {
 }
 
 export function ContentLab() {
-  const { apiKeys, addNotification, addActivity, persona, setActiveView, addPost } = useAppStore();
+  const {
+    apiKeys,
+    addNotification,
+    addActivity,
+    persona,
+    setActiveView,
+    addPost,
+    templates,
+    hashtagCollections,
+    incrementTemplateUsage,
+    incrementHashtagCollectionUsage,
+  } = useAppStore();
   const [topic, setTopic] = useState('');
   const [tone, setTone] = useState<Persona['tone']>('professional');
   const [platform, setPlatform] = useState<Platform>('instagram');
@@ -385,6 +405,8 @@ export function ContentLab() {
   const [prediction, setPrediction] = useState<EngagementPrediction | null>(null);
   const [showHashtagSuggestions, setShowHashtagSuggestions] = useState(false);
   const [suggestedHashtags, setSuggestedHashtags] = useState<string[]>([]);
+  const [showTemplatesPicker, setShowTemplatesPicker] = useState(false);
+  const [showHashtagsPicker, setShowHashtagsPicker] = useState(false);
 
   // Undo/redo for caption editing
   const {
@@ -500,6 +522,57 @@ export function ContentLab() {
 
   const anthropicReady = isAnthropicConfigured();
   const openaiReady = isOpenAIConfigured();
+
+  // Filter templates by platform
+  const availableTemplates = templates.filter(
+    (t) => t.platform === 'all' || t.platform === platform
+  );
+
+  // Filter hashtag collections by platform
+  const availableHashtagCollections = hashtagCollections.filter(
+    (c) => c.platform === 'all' || c.platform === platform
+  );
+
+  // Apply a template
+  const handleApplyTemplate = (template: ContentTemplate) => {
+    const content = template.content;
+    setGeneratedPost({
+      caption: content,
+      hashtags: [...template.hashtags],
+    });
+    resetCaptionHistory(content);
+    incrementTemplateUsage(template.id);
+    setShowTemplatesPicker(false);
+    addNotification({
+      type: 'success',
+      title: 'Template Applied',
+      message: `"${template.name}" loaded. Edit variables as needed.`,
+    });
+  };
+
+  // Apply hashtag collection
+  const handleApplyHashtagCollection = (collection: HashtagCollection) => {
+    if (generatedPost) {
+      const newHashtags = [...new Set([...generatedPost.hashtags, ...collection.hashtags])];
+      setGeneratedPost({
+        ...generatedPost,
+        hashtags: newHashtags,
+      });
+    } else {
+      setGeneratedPost({
+        caption: '',
+        hashtags: [...collection.hashtags],
+      });
+      resetCaptionHistory('');
+    }
+    incrementHashtagCollectionUsage(collection.id);
+    setShowHashtagsPicker(false);
+    addNotification({
+      type: 'success',
+      title: 'Hashtags Added',
+      message: `Added ${collection.hashtags.length} hashtags from "${collection.name}"`,
+    });
+  };
 
   const handleGenerate = async () => {
     if (!topic.trim()) return;
@@ -783,6 +856,123 @@ export function ContentLab() {
             />
           </GlassCard>
 
+          {/* Quick Actions - Templates & Hashtags */}
+          <div className="flex gap-3">
+            {/* Templates Dropdown */}
+            <div className="relative flex-1">
+              <Button
+                variant="secondary"
+                className="w-full justify-between"
+                onClick={() => {
+                  setShowTemplatesPicker(!showTemplatesPicker);
+                  setShowHashtagsPicker(false);
+                }}
+                disabled={availableTemplates.length === 0}
+              >
+                <span className="flex items-center gap-2">
+                  <BookTemplate size={16} />
+                  Use Template
+                </span>
+                <ChevronDown size={16} className={`transition-transform ${showTemplatesPicker ? 'rotate-180' : ''}`} />
+              </Button>
+              <AnimatePresence>
+                {showTemplatesPicker && availableTemplates.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute top-full left-0 right-0 mt-2 glass-panel rounded-xl border border-glass-border overflow-hidden z-20 max-h-64 overflow-y-auto"
+                  >
+                    {availableTemplates.map((template) => (
+                      <button
+                        key={template.id}
+                        onClick={() => handleApplyTemplate(template)}
+                        className="w-full px-4 py-3 text-left hover:bg-white/5 transition-colors border-b border-glass-border last:border-0"
+                      >
+                        <div className="font-medium text-white text-sm">{template.name}</div>
+                        {template.description && (
+                          <div className="text-xs text-gray-500 mt-0.5 truncate">{template.description}</div>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-gray-600 bg-white/5 px-1.5 py-0.5 rounded">
+                            {template.category}
+                          </span>
+                          {template.variables.length > 0 && (
+                            <span className="text-[10px] text-purple-400">
+                              {template.variables.length} variable{template.variables.length !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {availableTemplates.length === 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  No templates for {platform}. <button onClick={() => setActiveView('templates')} className="text-primary hover:underline">Create one</button>
+                </p>
+              )}
+            </div>
+
+            {/* Hashtags Dropdown */}
+            <div className="relative flex-1">
+              <Button
+                variant="secondary"
+                className="w-full justify-between"
+                onClick={() => {
+                  setShowHashtagsPicker(!showHashtagsPicker);
+                  setShowTemplatesPicker(false);
+                }}
+                disabled={availableHashtagCollections.length === 0}
+              >
+                <span className="flex items-center gap-2">
+                  <Hash size={16} />
+                  Add Hashtags
+                </span>
+                <ChevronDown size={16} className={`transition-transform ${showHashtagsPicker ? 'rotate-180' : ''}`} />
+              </Button>
+              <AnimatePresence>
+                {showHashtagsPicker && availableHashtagCollections.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute top-full left-0 right-0 mt-2 glass-panel rounded-xl border border-glass-border overflow-hidden z-20 max-h-64 overflow-y-auto"
+                  >
+                    {availableHashtagCollections.map((collection) => (
+                      <button
+                        key={collection.id}
+                        onClick={() => handleApplyHashtagCollection(collection)}
+                        className="w-full px-4 py-3 text-left hover:bg-white/5 transition-colors border-b border-glass-border last:border-0"
+                      >
+                        <div className="font-medium text-white text-sm">{collection.name}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {collection.hashtags.length} hashtags
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {collection.hashtags.slice(0, 4).map((tag) => (
+                            <span key={tag} className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                              #{tag}
+                            </span>
+                          ))}
+                          {collection.hashtags.length > 4 && (
+                            <span className="text-[10px] text-gray-500">+{collection.hashtags.length - 4}</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {availableHashtagCollections.length === 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  No collections for {platform}. <button onClick={() => setActiveView('hashtags')} className="text-primary hover:underline">Create one</button>
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* Tone Selection */}
           <GlassCard className="p-6">
             <label className="block text-sm font-medium text-gray-300 mb-3">
@@ -978,9 +1168,18 @@ export function ContentLab() {
                   >
                     <Redo2 size={16} />
                   </button>
-                  <span className="text-xs text-gray-500">
-                    {generatedPost.caption.length} chars
-                  </span>
+                  {(() => {
+                    const limit = platformCharLimits[platform].caption;
+                    const current = generatedPost.caption.length;
+                    const percentage = (current / limit) * 100;
+                    const isWarning = percentage >= 80 && percentage < 100;
+                    const isOver = percentage >= 100;
+                    return (
+                      <span className={`text-xs font-medium ${isOver ? 'text-critical' : isWarning ? 'text-warning' : 'text-gray-500'}`}>
+                        {current.toLocaleString()}/{limit.toLocaleString()}
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
               <textarea
@@ -989,9 +1188,19 @@ export function ContentLab() {
                 onFocus={() => setIsEditingCaption(true)}
                 onBlur={() => setIsEditingCaption(false)}
                 rows={4}
-                className="w-full bg-white/5 border border-glass-border rounded-xl py-3 px-4 text-white placeholder-gray-500 focus:border-primary transition-colors resize-none text-sm"
+                className={`w-full bg-white/5 border rounded-xl py-3 px-4 text-white placeholder-gray-500 transition-colors resize-none text-sm ${
+                  generatedPost.caption.length > platformCharLimits[platform].caption
+                    ? 'border-critical/50 focus:border-critical'
+                    : 'border-glass-border focus:border-primary'
+                }`}
                 placeholder="Your caption will appear here..."
               />
+              {generatedPost.caption.length > platformCharLimits[platform].caption && (
+                <p className="text-xs text-critical mt-2 flex items-center gap-1">
+                  <AlertCircle size={12} />
+                  Caption exceeds {platform} limit by {(generatedPost.caption.length - platformCharLimits[platform].caption).toLocaleString()} characters
+                </p>
+              )}
               <p className="text-xs text-gray-500 mt-2">
                 Tip: Use Cmd+Z to undo and Cmd+Shift+Z to redo while editing
               </p>
@@ -1004,7 +1213,17 @@ export function ContentLab() {
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-medium text-gray-300 flex items-center gap-2">
                   <Hash size={16} />
-                  Hashtags ({generatedPost.hashtags.length})
+                  Hashtags
+                  {(() => {
+                    const limit = platformCharLimits[platform].hashtags;
+                    const current = generatedPost.hashtags.length;
+                    const isOver = current > limit;
+                    return (
+                      <span className={`text-xs font-medium ${isOver ? 'text-critical' : 'text-gray-500'}`}>
+                        ({current}/{limit})
+                      </span>
+                    );
+                  })()}
                 </h4>
                 <Button
                   variant="ghost"
@@ -1014,6 +1233,12 @@ export function ContentLab() {
                   {editingHashtags ? 'Done' : 'Edit'}
                 </Button>
               </div>
+              {generatedPost.hashtags.length > platformCharLimits[platform].hashtags && (
+                <p className="text-xs text-critical mb-2 flex items-center gap-1">
+                  <AlertCircle size={12} />
+                  Too many hashtags for {platform}. Remove {generatedPost.hashtags.length - platformCharLimits[platform].hashtags} to optimize.
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
                 {generatedPost.hashtags.map((tag, index) => (
                   <motion.span
