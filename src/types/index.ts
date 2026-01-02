@@ -62,6 +62,7 @@ export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed';
 // Language types for multi-language content
 export type Language =
   | 'en' // English
+  | 'mn' // Mongolian
   | 'es' // Spanish
   | 'fr' // French
   | 'de' // German
@@ -85,6 +86,7 @@ export interface LanguageConfig {
 
 export const SUPPORTED_LANGUAGES: LanguageConfig[] = [
   { code: 'en', name: 'English', nativeName: 'English', direction: 'ltr' },
+  { code: 'mn', name: 'Mongolian', nativeName: 'Монгол', direction: 'ltr' },
   { code: 'es', name: 'Spanish', nativeName: 'Español', direction: 'ltr' },
   { code: 'fr', name: 'French', nativeName: 'Français', direction: 'ltr' },
   { code: 'de', name: 'German', nativeName: 'Deutsch', direction: 'ltr' },
