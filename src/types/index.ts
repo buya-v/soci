@@ -195,7 +195,7 @@ export interface GeneratedContent {
 }
 
 // Navigation
-export type ViewType = 'dashboard' | 'trends' | 'content' | 'templates' | 'hashtags' | 'media' | 'drafts' | 'calendar' | 'video' | 'automation' | 'budget';
+export type ViewType = 'dashboard' | 'trends' | 'content' | 'templates' | 'hashtags' | 'media' | 'drafts' | 'published' | 'calendar' | 'video' | 'automation' | 'budget';
 
 // App state
 export interface AppState {

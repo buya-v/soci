@@ -22,6 +22,7 @@ const TemplatesLibrary = lazy(() => import('./components/templates/TemplatesLibr
 const HashtagCollections = lazy(() => import('./components/templates/HashtagCollections').then(m => ({ default: m.HashtagCollections })));
 const MediaLibrary = lazy(() => import('./components/media/MediaLibrary').then(m => ({ default: m.MediaLibrary })));
 const DraftsQueue = lazy(() => import('./components/drafts/DraftsQueue').then(m => ({ default: m.DraftsQueue })));
+const PublishedPosts = lazy(() => import('./components/published/PublishedPosts').then(m => ({ default: m.PublishedPosts })));
 const CalendarView = lazy(() => import('./components/calendar/CalendarView').then(m => ({ default: m.CalendarView })));
 const VideoLab = lazy(() => import('./components/video/VideoLab').then(m => ({ default: m.VideoLab })));
 const AutomationHub = lazy(() => import('./components/automation/AutomationHub').then(m => ({ default: m.AutomationHub })));
@@ -114,6 +115,8 @@ function AppContent() {
         return <MediaLibrary />;
       case 'drafts':
         return <DraftsQueue />;
+      case 'published':
+        return <PublishedPosts />;
       case 'calendar':
         return <CalendarView />;
       case 'video':

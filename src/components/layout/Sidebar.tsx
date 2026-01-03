@@ -15,6 +15,7 @@ import {
   Image,
   Wallet,
   LogOut,
+  CheckCircle,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/ui/NotificationCenter';
@@ -42,6 +43,7 @@ const navItems: NavItem[] = [
   { id: 'hashtags', label: 'Hashtags', icon: Hash },
   { id: 'media', label: 'Media Library', icon: Image },
   { id: 'drafts', label: 'Queue', icon: FileText },
+  { id: 'published', label: 'Published', icon: CheckCircle },
   { id: 'calendar', label: 'Calendar', icon: Calendar },
   { id: 'video', label: 'Video Lab', icon: Video },
   { id: 'budget', label: 'Budget', icon: Wallet },
