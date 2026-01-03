@@ -355,10 +355,11 @@ function generateSuggestions(factors: PredictionFactor[], platform: Platform): s
           suggestions.push('Add 1-3 relevant emojis to make your post more eye-catching');
         }
         break;
-      case 'Suboptimal Time':
+      case 'Suboptimal Time': {
         const times = optimalPostingTimes[platform];
         suggestions.push(`Try posting at ${times.hours[0]}:00 or ${times.hours[1]}:00 for better reach`);
         break;
+      }
     }
   });
 
@@ -375,7 +376,7 @@ function calculateConfidence(factors: PredictionFactor[]): number {
   const factorCount = factors.length;
   const positiveWeight = factors.filter(f => f.impact === 'positive').length;
 
-  let confidence = 60 + (factorCount * 3) + (positiveWeight * 2);
+  const confidence = 60 + (factorCount * 3) + (positiveWeight * 2);
   return Math.min(95, confidence);
 }
 
