@@ -109,50 +109,42 @@ export function Sidebar({ activeView, onViewChange, onShowShortcuts, onShowNotif
       </nav>
 
       {/* Status Section */}
-      <div className="p-3 border-t border-glass-border space-y-3">
+      <div className="p-3 border-t border-glass-border space-y-2">
         {/* Theme & Notifications */}
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500">Theme</span>
             <ThemeToggle variant="compact" />
           </div>
-          {onShowNotifications && (
-            <NotificationBell onClick={onShowNotifications} />
-          )}
+          <div className="flex items-center gap-2">
+            {onShowShortcuts && (
+              <button
+                onClick={onShowShortcuts}
+                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-gray-400 hover:text-white"
+                title="Keyboard Shortcuts (/)"
+              >
+                <Keyboard size={14} />
+              </button>
+            )}
+            {onShowNotifications && (
+              <NotificationBell onClick={onShowNotifications} />
+            )}
+          </div>
         </div>
 
-        {/* Keyboard Shortcuts Button */}
-        {onShowShortcuts && (
-          <button
-            onClick={onShowShortcuts}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-gray-400 hover:text-white"
-          >
-            <div className="flex items-center gap-2">
-              <Keyboard size={14} />
-              <span className="text-xs">Shortcuts</span>
-            </div>
-            <kbd className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded font-mono">/</kbd>
-          </button>
-        )}
-
         {/* Status Badge */}
-        <div className="bg-white/5 rounded-lg p-3 border border-glass-border">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
-            <span className="text-xs font-medium text-success">Engine Online</span>
-          </div>
-          <p className="text-[10px] text-gray-500">
-            v2.0 Autonomous Core Active
-          </p>
+        <div className="flex items-center gap-2 px-2 py-1">
+          <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
+          <span className="text-[10px] text-gray-500">v2.0 Online</span>
         </div>
 
         {/* Logout Button */}
         <button
           onClick={logout}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-critical/20 transition-colors text-gray-400 hover:text-critical"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-critical/10 hover:bg-critical/20 transition-colors text-critical/80 hover:text-critical border border-critical/20"
         >
-          <LogOut size={14} />
-          <span className="text-xs">Sign Out</span>
+          <LogOut size={16} />
+          <span className="text-sm font-medium">Sign Out</span>
         </button>
       </div>
     </motion.aside>
