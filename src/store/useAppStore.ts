@@ -19,6 +19,7 @@ import type {
   Language,
   Platform,
 } from '@/types';
+import { hashPassword } from '@/utils/auth';
 
 export interface ApiKeys {
   anthropic: string;
@@ -28,6 +29,11 @@ export interface ApiKeys {
 export type Theme = 'dark' | 'light' | 'system';
 
 interface AppState {
+  // Authentication
+  isAuthenticated: boolean;
+  login: (password: string) => Promise<boolean>;
+  logout: () => void;
+
   // Navigation
   activeView: ViewType;
   setActiveView: (view: ViewType) => void;
@@ -264,6 +270,24 @@ const optimizationStrategies: Record<BudgetConfig['optimizationMode'], Record<Bu
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
+      // Authentication
+      isAuthenticated: false,
+      login: async (password: string) => {
+        const expectedHash = import.meta.env.VITE_APP_HASH;
+        if (!expectedHash) {
+          // No password configured, allow access
+          set({ isAuthenticated: true });
+          return true;
+        }
+        const inputHash = await hashPassword(password);
+        if (inputHash === expectedHash) {
+          set({ isAuthenticated: true });
+          return true;
+        }
+        return false;
+      },
+      logout: () => set({ isAuthenticated: false }),
+
       // Navigation
       activeView: 'dashboard',
       setActiveView: (view) => set({ activeView: view }),
@@ -590,6 +614,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'soci-storage-v2',
       partialize: (state) => ({
+        isAuthenticated: state.isAuthenticated,
         persona: state.persona,
         automationSettings: state.automationSettings,
         platformCredentials: state.platformCredentials,

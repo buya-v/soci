@@ -14,9 +14,11 @@ import {
   Hash,
   Image,
   Wallet,
+  LogOut,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/ui/NotificationCenter';
+import { useAppStore } from '@/store/useAppStore';
 import type { ViewType } from '@/types';
 
 interface SidebarProps {
@@ -47,6 +49,8 @@ const navItems: NavItem[] = [
 ];
 
 export function Sidebar({ activeView, onViewChange, onShowShortcuts, onShowNotifications }: SidebarProps) {
+  const logout = useAppStore((state) => state.logout);
+
   return (
     <motion.aside
       initial={{ x: -20, opacity: 0 }}
@@ -141,6 +145,15 @@ export function Sidebar({ activeView, onViewChange, onShowShortcuts, onShowNotif
             v2.0 Autonomous Core Active
           </p>
         </div>
+
+        {/* Logout Button */}
+        <button
+          onClick={logout}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-critical/20 transition-colors text-gray-400 hover:text-critical"
+        >
+          <LogOut size={14} />
+          <span className="text-xs">Sign Out</span>
+        </button>
       </div>
     </motion.aside>
   );

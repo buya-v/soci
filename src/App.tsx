@@ -8,6 +8,7 @@ import { KeyboardShortcutsModal } from './components/ui/KeyboardShortcutsModal';
 import { NotificationCenter } from './components/ui/NotificationCenter';
 import { CommandPalette, useCommandPalette } from './components/ui/CommandPalette';
 import { DataManager } from './components/settings/DataManager';
+import { Login } from './components/auth/Login';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useTheme } from './hooks/useTheme';
 import { useAppStore } from './store/useAppStore';
@@ -209,6 +210,7 @@ function AppContent() {
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const isAuthenticated = useAppStore((state) => state.isAuthenticated);
 
   // Initial boot sequence
   useEffect(() => {
@@ -221,6 +223,10 @@ function App() {
 
   if (isLoading) {
     return <LoadingScreen />;
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
   }
 
   return (
