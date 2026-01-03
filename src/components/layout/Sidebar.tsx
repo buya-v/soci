@@ -109,7 +109,7 @@ export function Sidebar({ activeView, onViewChange, onShowShortcuts, onShowNotif
       </nav>
 
       {/* Status Section */}
-      <div className="p-3 border-t border-glass-border space-y-2">
+      <div className="flex-shrink-0 p-3 border-t border-glass-border space-y-2">
         {/* Theme & Notifications */}
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-2">
