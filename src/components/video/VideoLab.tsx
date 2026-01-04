@@ -491,6 +491,22 @@ Make the script conversational, authentic, and optimized for ${videoPlatform}'s 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Generation Controls */}
         <div className="space-y-6">
+          {/* Demo Notice */}
+          <div className="p-4 bg-warning/10 border border-warning/20 rounded-xl">
+            <div className="flex items-start gap-3">
+              <div className="p-1.5 rounded-lg bg-warning/20">
+                <Sparkles size={16} className="text-warning" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-warning">Demo Mode</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Video generation shows a sample video. Real AI video generation (Veo, Runway) requires API integration.
+                  The AI Script Writer above is fully functional.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Motion Prompt */}
           <GlassCard className="p-6">
             <label className="block text-sm font-medium text-gray-300 mb-3">
@@ -590,7 +606,7 @@ Make the script conversational, authentic, and optimized for ${videoPlatform}'s 
 
           {/* Generate Button */}
           <Button
-            variant="primary"
+            variant="secondary"
             size="lg"
             onClick={handleGenerate}
             disabled={!prompt.trim() || isGenerating}
@@ -604,7 +620,7 @@ Make the script conversational, authentic, and optimized for ${videoPlatform}'s 
             ) : (
               <>
                 <Sparkles size={18} />
-                Generate Video
+                Preview Demo Video
               </>
             )}
           </Button>
