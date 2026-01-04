@@ -57,11 +57,12 @@ const videoPlatformOptions: { id: VideoPlatform; label: string; maxDuration: str
 ];
 
 const loadingMessages = [
-  'Dreaming up frames...',
-  'Synthesizing temporal consistency...',
-  'Rendering cinematic lighting...',
-  'Adding motion dynamics...',
-  'Polishing final touches...',
+  'Starting video generation...',
+  'AI is creating your video...',
+  'Synthesizing frames...',
+  'Rendering motion...',
+  'Adding cinematic effects...',
+  'Almost there...',
 ];
 
 interface AspectRatioOption {
@@ -100,6 +101,9 @@ export function VideoLab() {
   const [generatedScript, setGeneratedScript] = useState<GeneratedScript | null>(null);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
+  // Video generation state
+  const [videoGenerationStatus, setVideoGenerationStatus] = useState<string>('');
+
   // Initialize AI clients
   useEffect(() => {
     if (apiKeys.anthropic) {
@@ -113,16 +117,16 @@ export function VideoLab() {
   const aiReady = isAnyAIConfigured();
   const currentProvider = getPreferredProvider();
 
-  // Cycle through loading messages
+  // Cycle through loading messages while generating
   useEffect(() => {
-    if (!isGenerating) return;
+    if (!isGenerating || videoGenerationStatus) return;
 
     const interval = setInterval(() => {
       setLoadingMessageIndex((prev) => (prev + 1) % loadingMessages.length);
-    }, 3000);
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [isGenerating]);
+  }, [isGenerating, videoGenerationStatus]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -138,15 +142,102 @@ export function VideoLab() {
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
+    if (!apiKeys.gemini) {
+      addNotification({
+        type: 'warning',
+        title: 'API Key Required',
+        message: 'Configure Gemini API key in Automation Hub to generate videos with Veo',
+      });
+      return;
+    }
+
     setIsGenerating(true);
     setLoadingMessageIndex(0);
+    setGeneratedVideoUrl(null);
+    setVideoGenerationStatus('Starting video generation...');
 
-    // Simulate video generation (would call Veo API in production)
-    await new Promise(resolve => setTimeout(resolve, 8000));
+    try {
+      // Start video generation
+      const startResponse = await fetch('/api/video/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: prompt.slice(0, 1024), // Veo has 1024 char limit
+          aspectRatio: aspectRatio === '9:16' ? '9:16' : '16:9',
+          apiKey: apiKeys.gemini,
+        }),
+      });
 
-    // Use a sample video URL for demo
-    setGeneratedVideoUrl('https://www.w3schools.com/html/mov_bbb.mp4');
-    setIsGenerating(false);
+      const startData = await startResponse.json();
+
+      if (!startResponse.ok) {
+        throw new Error(startData.error || 'Failed to start video generation');
+      }
+
+      const opName = startData.operation?.name;
+      if (!opName) {
+        throw new Error('No operation name returned');
+      }
+
+      setVideoGenerationStatus('Video generation in progress...');
+
+      // Poll for completion
+      const maxPolls = 60; // 10 minutes max (10s intervals)
+      let pollCount = 0;
+
+      while (pollCount < maxPolls) {
+        await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10s
+
+        const statusResponse = await fetch('/api/video/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            operationName: opName,
+            apiKey: apiKeys.gemini,
+          }),
+        });
+
+        const statusData = await statusResponse.json();
+
+        if (!statusResponse.ok) {
+          throw new Error(statusData.error || 'Failed to check status');
+        }
+
+        if (statusData.done) {
+          if (statusData.success && statusData.video?.uri) {
+            setGeneratedVideoUrl(statusData.video.uri);
+            setVideoGenerationStatus('');
+            addNotification({
+              type: 'success',
+              title: 'Video Generated',
+              message: 'Your AI video is ready!',
+            });
+          } else {
+            throw new Error(statusData.error || 'Video generation failed');
+          }
+          break;
+        }
+
+        pollCount++;
+        // Cycle through loading messages
+        setLoadingMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+      }
+
+      if (pollCount >= maxPolls) {
+        throw new Error('Video generation timed out. Please try again.');
+      }
+
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to generate video';
+      setVideoGenerationStatus('');
+      addNotification({
+        type: 'error',
+        title: 'Video Generation Failed',
+        message,
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const togglePlayPause = () => {
@@ -491,17 +582,20 @@ Make the script conversational, authentic, and optimized for ${videoPlatform}'s 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Generation Controls */}
         <div className="space-y-6">
-          {/* Demo Notice */}
-          <div className="p-4 bg-warning/10 border border-warning/20 rounded-xl">
+          {/* Veo Status */}
+          <div className={`p-4 rounded-xl ${apiKeys.gemini ? 'bg-success/10 border border-success/20' : 'bg-warning/10 border border-warning/20'}`}>
             <div className="flex items-start gap-3">
-              <div className="p-1.5 rounded-lg bg-warning/20">
-                <Sparkles size={16} className="text-warning" />
+              <div className={`p-1.5 rounded-lg ${apiKeys.gemini ? 'bg-success/20' : 'bg-warning/20'}`}>
+                <Video size={16} className={apiKeys.gemini ? 'text-success' : 'text-warning'} />
               </div>
               <div>
-                <p className="text-sm font-medium text-warning">Demo Mode</p>
+                <p className={`text-sm font-medium ${apiKeys.gemini ? 'text-success' : 'text-warning'}`}>
+                  {apiKeys.gemini ? 'Veo Video Generation Ready' : 'Gemini API Key Required'}
+                </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Video generation shows a sample video. Real AI video generation (Veo, Runway) requires API integration.
-                  The AI Script Writer above is fully functional.
+                  {apiKeys.gemini
+                    ? 'Powered by Google Veo 2. Videos are 4-8 seconds, 720p. Generation takes 1-6 minutes.'
+                    : 'Add your Gemini API key in Automation Hub to enable AI video generation with Google Veo.'}
                 </p>
               </div>
             </div>
@@ -606,21 +700,21 @@ Make the script conversational, authentic, and optimized for ${videoPlatform}'s 
 
           {/* Generate Button */}
           <Button
-            variant="secondary"
+            variant="primary"
             size="lg"
             onClick={handleGenerate}
-            disabled={!prompt.trim() || isGenerating}
+            disabled={!prompt.trim() || isGenerating || !apiKeys.gemini}
             className="w-full"
           >
             {isGenerating ? (
               <>
                 <Loader2 size={18} className="animate-spin" />
-                {loadingMessages[loadingMessageIndex]}
+                {videoGenerationStatus || loadingMessages[loadingMessageIndex]}
               </>
             ) : (
               <>
-                <Sparkles size={18} />
-                Preview Demo Video
+                <Video size={18} />
+                Generate Video with Veo
               </>
             )}
           </Button>
