@@ -51,6 +51,10 @@ export function isGeminiConfigured(): boolean {
   return geminiClient !== null;
 }
 
+export function isAnyAIConfigured(): boolean {
+  return anthropicClient !== null || geminiClient !== null;
+}
+
 // Get the active AI client based on preference and availability
 function getActiveProvider(): AIProvider | null {
   if (preferredProvider === 'gemini' && geminiClient) {
@@ -155,7 +159,7 @@ async function callAnthropic(systemPrompt: string, userPrompt: string, maxTokens
 }
 
 // Unified AI call that uses preferred provider
-async function callAI(systemPrompt: string, userPrompt: string, maxTokens: number = 1024): Promise<string> {
+export async function callAI(systemPrompt: string, userPrompt: string, maxTokens: number = 1024): Promise<string> {
   const provider = getActiveProvider();
 
   if (!provider) {

@@ -21,8 +21,13 @@ import {
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/store/useAppStore';
-import { isAnthropicConfigured, initAnthropicClient } from '@/services/ai';
-import Anthropic from '@anthropic-ai/sdk';
+import {
+  isAnyAIConfigured,
+  initAnthropicClient,
+  initGeminiClient,
+  callAI,
+  getPreferredProvider,
+} from '@/services/ai';
 
 type AspectRatio = '16:9' | '9:16' | '1:1';
 type Resolution = '720p' | '1080p';
@@ -95,14 +100,18 @@ export function VideoLab() {
   const [generatedScript, setGeneratedScript] = useState<GeneratedScript | null>(null);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
-  // Initialize Anthropic client
+  // Initialize AI clients
   useEffect(() => {
     if (apiKeys.anthropic) {
       initAnthropicClient(apiKeys.anthropic);
     }
-  }, [apiKeys.anthropic]);
+    if (apiKeys.gemini) {
+      initGeminiClient(apiKeys.gemini);
+    }
+  }, [apiKeys.anthropic, apiKeys.gemini]);
 
-  const anthropicReady = isAnthropicConfigured();
+  const aiReady = isAnyAIConfigured();
+  const currentProvider = getPreferredProvider();
 
   // Cycle through loading messages
   useEffect(() => {
@@ -154,11 +163,11 @@ export function VideoLab() {
   const handleGenerateScript = async () => {
     if (!scriptTopic.trim()) return;
 
-    if (!anthropicReady) {
+    if (!aiReady) {
       addNotification({
         type: 'warning',
         title: 'API Key Required',
-        message: 'Configure Anthropic API key in Automation Hub',
+        message: 'Configure Anthropic or Gemini API key in Automation Hub',
       });
       return;
     }
@@ -166,24 +175,14 @@ export function VideoLab() {
     setIsGeneratingScript(true);
 
     try {
-      const client = new Anthropic({
-        apiKey: apiKeys.anthropic,
-        dangerouslyAllowBrowser: true,
-      });
-
       const platformInfo = videoPlatformOptions.find(p => p.id === videoPlatform);
       const styleInfo = videoStyleOptions.find(s => s.id === videoStyle);
 
-      const response = await client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
-        system: `You are an expert video scriptwriter specializing in short-form social media content. Create engaging, platform-optimized scripts that capture attention immediately.
+      const systemPrompt = `You are an expert video scriptwriter specializing in short-form social media content. Create engaging, platform-optimized scripts that capture attention immediately.
 
-Output format: Respond with valid JSON only, no markdown, no code blocks.`,
-        messages: [
-          {
-            role: 'user',
-            content: `Create a ${videoStyle} video script for ${videoPlatform} about: "${scriptTopic}"
+Output format: Respond with valid JSON only, no markdown, no code blocks.`;
+
+      const userPrompt = `Create a ${videoStyle} video script for ${videoPlatform} about: "${scriptTopic}"
 
 Requirements:
 - Platform: ${platformInfo?.label} (max ${platformInfo?.maxDuration})
@@ -201,17 +200,10 @@ Respond with this exact JSON structure:
   "duration": "Estimated video duration"
 }
 
-Make the script conversational, authentic, and optimized for ${videoPlatform}'s audience.`,
-          },
-        ],
-      });
+Make the script conversational, authentic, and optimized for ${videoPlatform}'s audience.`;
 
-      const textContent = response.content.find((block) => block.type === 'text');
-      if (!textContent || textContent.type !== 'text') {
-        throw new Error('No text content in response');
-      }
-
-      const parsed = JSON.parse(textContent.text);
+      const responseText = await callAI(systemPrompt, userPrompt, 1024);
+      const parsed = JSON.parse(responseText);
       setGeneratedScript({
         hook: parsed.hook || '',
         body: Array.isArray(parsed.body) ? parsed.body : [],
@@ -280,10 +272,10 @@ Make the script conversational, authentic, and optimized for ${videoPlatform}'s 
           <p className="text-gray-400">Create AI-powered video content from text prompts</p>
         </div>
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-          anthropicReady ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+          aiReady ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
         }`}>
-          <span className={`w-2 h-2 rounded-full ${anthropicReady ? 'bg-success' : 'bg-warning'}`} />
-          Script AI {anthropicReady ? 'Ready' : 'Not Configured'}
+          <span className={`w-2 h-2 rounded-full ${aiReady ? 'bg-success' : 'bg-warning'}`} />
+          {aiReady ? `Script AI (${currentProvider === 'gemini' ? 'Gemini' : 'Claude'})` : 'Script AI Not Configured'}
         </div>
       </div>
 
@@ -373,7 +365,7 @@ Make the script conversational, authentic, and optimized for ${videoPlatform}'s 
                 <Button
                   variant="primary"
                   onClick={handleGenerateScript}
-                  disabled={!scriptTopic.trim() || isGeneratingScript || !anthropicReady}
+                  disabled={!scriptTopic.trim() || isGeneratingScript || !aiReady}
                   className="w-full"
                 >
                   {isGeneratingScript ? (
