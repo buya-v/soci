@@ -289,10 +289,15 @@ export function TrendEngine() {
         message: `${trend.topic} is ${analysis.relevanceScore}% relevant to your niche`,
       });
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      const isCreditsError = errorMessage.includes('credit balance') || errorMessage.includes('too low');
+
       addNotification({
         type: 'error',
-        title: 'Analysis Failed',
-        message: err instanceof Error ? err.message : 'Could not analyze trend',
+        title: isCreditsError ? 'API Credits Depleted' : 'Analysis Failed',
+        message: isCreditsError
+          ? 'Your Anthropic API credits are exhausted. Please add credits at console.anthropic.com or update your API key in Automation settings.'
+          : errorMessage || 'Could not analyze trend',
       });
     } finally {
       setAnalyzingId(null);

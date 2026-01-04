@@ -327,16 +327,34 @@ export interface TrendAnalysis {
   bestPlatforms: Platform[];
 }
 
+// Helper to format API errors with user-friendly messages
+function formatApiError(error: unknown): Error {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (message.includes('credit balance') || message.includes('too low')) {
+    return new Error('API credits depleted. Please add credits at console.anthropic.com or update your API key.');
+  }
+  if (message.includes('invalid_api_key') || message.includes('401')) {
+    return new Error('Invalid API key. Please check your API key in Automation settings.');
+  }
+  if (message.includes('rate_limit') || message.includes('429')) {
+    return new Error('Rate limit exceeded. Please wait a moment and try again.');
+  }
+
+  return error instanceof Error ? error : new Error(message);
+}
+
 export async function analyzeTrendRelevance(
   trend: string,
   niche: string,
   topics: string[]
 ): Promise<TrendAnalysis> {
   if (!anthropicClient) {
-    throw new Error('Anthropic API key not configured.');
+    throw new Error('Anthropic API key not configured. Please add your API key in Automation settings.');
   }
 
-  const response = await anthropicClient.messages.create({
+  try {
+    const response = await anthropicClient.messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 512,
     messages: [
@@ -361,22 +379,25 @@ relevanceScore should be 0-100. Only include platforms from: twitter, instagram,
       },
     ],
     system: 'You are a social media trend analyst. Respond with valid JSON only.',
-  });
+    });
 
-  const textContent = response.content.find((block) => block.type === 'text');
-  if (!textContent || textContent.type !== 'text') {
-    throw new Error('No text content in response');
-  }
+    const textContent = response.content.find((block) => block.type === 'text');
+    if (!textContent || textContent.type !== 'text') {
+      throw new Error('No text content in response');
+    }
 
-  try {
-    return JSON.parse(textContent.text);
-  } catch {
-    return {
-      relevanceScore: 50,
-      reasoning: 'Unable to analyze',
-      suggestedAngles: [],
-      targetAudiences: [],
-      bestPlatforms: ['twitter'],
-    };
+    try {
+      return JSON.parse(textContent.text);
+    } catch {
+      return {
+        relevanceScore: 50,
+        reasoning: 'Unable to analyze',
+        suggestedAngles: [],
+        targetAudiences: [],
+        bestPlatforms: ['twitter'],
+      };
+    }
+  } catch (error) {
+    throw formatApiError(error);
   }
 }
