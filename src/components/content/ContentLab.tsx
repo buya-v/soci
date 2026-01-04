@@ -31,7 +31,6 @@ import {
   Lightbulb,
   ChevronRight,
   Zap,
-  Globe2,
   Languages,
 } from 'lucide-react';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
@@ -410,7 +409,6 @@ export function ContentLab() {
   const [tone, setTone] = useState<Persona['tone']>('professional');
   const [platform, setPlatform] = useState<Platform>('instagram');
   const [language, setLanguage] = useState<Language>(() => getEffectiveLanguage('instagram'));
-  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
@@ -1276,54 +1274,29 @@ export function ContentLab() {
               <Languages size={16} className="text-primary" />
               Content Language
             </label>
-            <div className="relative">
-              <button
-                onClick={() => setShowLanguagePicker(!showLanguagePicker)}
-                className="w-full flex items-center justify-between py-2.5 px-4 bg-white/5 border border-glass-border rounded-xl text-sm font-medium text-white hover:border-glass-border-hover transition-all"
-              >
-                <span className="flex items-center gap-2">
-                  <Globe2 size={16} className="text-gray-400" />
-                  {SUPPORTED_LANGUAGES.find(l => l.code === language)?.name || 'English'}
-                  <span className="text-xs text-gray-500">
-                    ({SUPPORTED_LANGUAGES.find(l => l.code === language)?.nativeName})
-                  </span>
-                </span>
-                <ChevronDown size={16} className={`text-gray-400 transition-transform ${showLanguagePicker ? 'rotate-180' : ''}`} />
-              </button>
-              <AnimatePresence>
-                {showLanguagePicker && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="absolute top-full left-0 right-0 mt-2 glass-panel rounded-xl border border-glass-border overflow-hidden z-20 max-h-64 overflow-y-auto"
-                  >
-                    {SUPPORTED_LANGUAGES.map((lang) => (
-                      <button
-                        key={lang.code}
-                        onClick={() => {
-                          setLanguage(lang.code);
-                          setShowLanguagePicker(false);
-                        }}
-                        className={`w-full px-4 py-3 text-left hover:bg-white/5 transition-colors border-b border-glass-border last:border-0 flex items-center justify-between ${
-                          language === lang.code ? 'bg-primary/10' : ''
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-white">{lang.name}</span>
-                          <span className="text-xs text-gray-500">{lang.nativeName}</span>
-                        </div>
-                        {language === lang.code && (
-                          <Check size={16} className="text-primary" />
-                        )}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            <div className="grid grid-cols-3 gap-2 max-h-[280px] overflow-y-auto pr-1">
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => setLanguage(lang.code)}
+                  className={`
+                    py-2.5 px-3 rounded-xl text-sm font-medium transition-all text-left
+                    ${language === lang.code
+                      ? 'bg-primary/20 text-primary-light border border-primary/30'
+                      : 'bg-white/5 text-gray-400 border border-glass-border hover:border-glass-border-hover hover:bg-white/10'
+                    }
+                  `}
+                >
+                  <div className="flex items-center gap-1.5">
+                    {language === lang.code && <Check size={12} className="text-primary flex-shrink-0" />}
+                    <span className="truncate">{lang.name}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5 truncate">{lang.nativeName}</div>
+                </button>
+              ))}
             </div>
             {persona?.platformLanguages?.[platform] && persona.platformLanguages[platform] !== persona.defaultLanguage && (
-              <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+              <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
                 <span className="text-primary">Platform default:</span> {SUPPORTED_LANGUAGES.find(l => l.code === persona.platformLanguages?.[platform])?.name}
               </p>
             )}
