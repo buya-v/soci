@@ -7,26 +7,26 @@ import {
   Clock,
   MessageSquare,
   Check,
-  X,
   Key,
   Eye,
   EyeOff,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/store/useAppStore';
 import { initAnthropicClient, initOpenAIClient, isAnthropicConfigured, isOpenAIConfigured } from '@/services/ai';
+import {
+  isTwitterConnected,
+  getTwitterUsername,
+  connectTwitter,
+  disconnectTwitter,
+  handleTwitterCallback,
+} from '@/services/twitter';
 import type { Platform, Persona, AutomationSettings, PlatformCredential } from '@/types';
 
 const toneOptions: Persona['tone'][] = ['professional', 'casual', 'witty', 'inspirational'];
-
-const platformCredentials: PlatformCredential[] = [
-  { platform: 'instagram', isConnected: true, username: '@soci_ai' },
-  { platform: 'twitter', isConnected: true, username: '@soci_ai' },
-  { platform: 'linkedin', isConnected: false },
-  { platform: 'tiktok', isConnected: false },
-];
 
 interface ToggleSwitchProps {
   enabled: boolean;
@@ -57,14 +57,23 @@ function ToggleSwitch({ enabled, onChange, label, description, icon }: ToggleSwi
   );
 }
 
-function PlatformCard({ credential }: { credential: PlatformCredential }) {
+interface PlatformCardProps {
+  credential: PlatformCredential;
+  onConnect?: () => void;
+  onDisconnect?: () => void;
+  isLoading?: boolean;
+}
+
+function PlatformCard({ credential, onConnect, onDisconnect, isLoading }: PlatformCardProps) {
   const platformLabels: Record<Platform, string> = {
     instagram: 'Instagram',
-    twitter: 'Twitter / X',
+    twitter: 'X (Twitter)',
     linkedin: 'LinkedIn',
     tiktok: 'TikTok',
     facebook: 'Facebook',
   };
+
+  const isSupported = credential.platform === 'twitter';
 
   return (
     <div className={`
@@ -81,21 +90,48 @@ function PlatformCard({ credential }: { credential: PlatformCredential }) {
             <Check size={12} />
             Connected
           </span>
+        ) : isSupported ? (
+          <span className="flex items-center gap-1 text-xs text-primary">
+            Ready to connect
+          </span>
         ) : (
           <span className="flex items-center gap-1 text-xs text-gray-500">
-            <X size={12} />
-            Not connected
+            Coming soon
           </span>
         )}
       </div>
       {credential.isConnected ? (
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">{credential.username}</span>
-          <Button variant="ghost" size="sm">Disconnect</Button>
+          <span className="text-sm text-gray-400">@{credential.username}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onDisconnect}
+            disabled={isLoading}
+          >
+            Disconnect
+          </Button>
         </div>
+      ) : isSupported ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-full"
+          onClick={onConnect}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 size={14} className="animate-spin mr-2" />
+              Connecting...
+            </>
+          ) : (
+            'Connect Account'
+          )}
+        </Button>
       ) : (
-        <Button variant="secondary" size="sm" className="w-full">
-          Connect Account
+        <Button variant="secondary" size="sm" className="w-full" disabled>
+          Coming Soon
         </Button>
       )}
     </div>
@@ -171,6 +207,59 @@ export function AutomationHub() {
   });
   const [anthropicConfigured, setAnthropicConfigured] = useState(false);
   const [openaiConfigured, setOpenaiConfigured] = useState(false);
+  const [twitterConnected, setTwitterConnected] = useState(false);
+  const [twitterUsername, setTwitterUsername] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  // Check Twitter connection status on mount and handle OAuth callback
+  useEffect(() => {
+    // Handle OAuth callback if present
+    const callbackResult = handleTwitterCallback();
+    if (callbackResult.success) {
+      setTwitterConnected(true);
+      setTwitterUsername(callbackResult.username || null);
+      addNotification({
+        type: 'success',
+        title: 'X Connected',
+        message: `Successfully connected @${callbackResult.username}`,
+      });
+    } else if (callbackResult.error) {
+      addNotification({
+        type: 'error',
+        title: 'Connection Failed',
+        message: callbackResult.error,
+      });
+    }
+
+    // Check existing connection
+    setTwitterConnected(isTwitterConnected());
+    setTwitterUsername(getTwitterUsername());
+  }, [addNotification]);
+
+  // Build platform credentials dynamically
+  const platformCredentials: PlatformCredential[] = [
+    { platform: 'twitter', isConnected: twitterConnected, username: twitterUsername || undefined },
+    { platform: 'instagram', isConnected: false },
+    { platform: 'facebook', isConnected: false },
+    { platform: 'linkedin', isConnected: false },
+    { platform: 'tiktok', isConnected: false },
+  ];
+
+  const handleConnectTwitter = () => {
+    setIsConnecting(true);
+    connectTwitter();
+  };
+
+  const handleDisconnectTwitter = () => {
+    disconnectTwitter();
+    setTwitterConnected(false);
+    setTwitterUsername(null);
+    addNotification({
+      type: 'info',
+      title: 'X Disconnected',
+      message: 'Your X account has been disconnected',
+    });
+  };
 
   // Initialize AI clients when keys change
   useEffect(() => {
@@ -383,7 +472,13 @@ export function AutomationHub() {
             </h3>
             <div className="grid grid-cols-1 gap-3">
               {platformCredentials.map((credential) => (
-                <PlatformCard key={credential.platform} credential={credential} />
+                <PlatformCard
+                  key={credential.platform}
+                  credential={credential}
+                  onConnect={credential.platform === 'twitter' ? handleConnectTwitter : undefined}
+                  onDisconnect={credential.platform === 'twitter' ? handleDisconnectTwitter : undefined}
+                  isLoading={credential.platform === 'twitter' && isConnecting}
+                />
               ))}
             </div>
           </GlassCard>
