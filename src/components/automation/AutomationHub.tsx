@@ -30,9 +30,10 @@ import {
 import {
   isTwitterConnected,
   getTwitterUsername,
-  connectTwitter,
   disconnectTwitter,
   handleTwitterCallback,
+  setOAuth1Credentials,
+  getTwitterAuthType,
 } from '@/services/twitter';
 import type { Platform, Persona, AutomationSettings, PlatformCredential } from '@/types';
 
@@ -67,14 +68,107 @@ function ToggleSwitch({ enabled, onChange, label, description, icon }: ToggleSwi
   );
 }
 
-interface PlatformCardProps {
-  credential: PlatformCredential;
-  onConnect?: () => void;
-  onDisconnect?: () => void;
+interface TwitterCredentialsFormProps {
+  onConnect: (accessToken: string, accessSecret: string, username: string) => void;
   isLoading?: boolean;
 }
 
-function PlatformCard({ credential, onConnect, onDisconnect, isLoading }: PlatformCardProps) {
+function TwitterCredentialsForm({ onConnect, isLoading }: TwitterCredentialsFormProps) {
+  const [accessToken, setAccessToken] = useState('');
+  const [accessSecret, setAccessSecret] = useState('');
+  const [username, setUsername] = useState('');
+  const [showTokens, setShowTokens] = useState(false);
+
+  const handleConnect = () => {
+    if (accessToken && accessSecret && username) {
+      onConnect(accessToken, accessSecret, username);
+    }
+  };
+
+  const isValid = accessToken.trim() && accessSecret.trim() && username.trim();
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="block text-xs font-medium text-gray-400 mb-1">X Username</label>
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value.replace('@', ''))}
+          placeholder="username (without @)"
+          className="w-full bg-white/5 border border-glass-border rounded-lg py-2 px-3 text-white placeholder-gray-500 focus:border-primary transition-colors text-sm"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-400 mb-1">Access Token</label>
+        <div className="relative">
+          <input
+            type={showTokens ? 'text' : 'password'}
+            value={accessToken}
+            onChange={(e) => setAccessToken(e.target.value)}
+            placeholder="Access Token from Twitter Developer Portal"
+            className="w-full bg-white/5 border border-glass-border rounded-lg py-2 px-3 pr-10 text-white placeholder-gray-500 focus:border-primary transition-colors text-sm font-mono"
+          />
+          <button
+            type="button"
+            onClick={() => setShowTokens(!showTokens)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+          >
+            {showTokens ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-400 mb-1">Access Token Secret</label>
+        <input
+          type={showTokens ? 'text' : 'password'}
+          value={accessSecret}
+          onChange={(e) => setAccessSecret(e.target.value)}
+          placeholder="Access Token Secret"
+          className="w-full bg-white/5 border border-glass-border rounded-lg py-2 px-3 text-white placeholder-gray-500 focus:border-primary transition-colors text-sm font-mono"
+        />
+      </div>
+      <Button
+        variant="primary"
+        size="sm"
+        className="w-full"
+        onClick={handleConnect}
+        disabled={!isValid || isLoading}
+      >
+        {isLoading ? (
+          <>
+            <Loader2 size={14} className="animate-spin mr-2" />
+            Connecting...
+          </>
+        ) : (
+          'Connect X Account'
+        )}
+      </Button>
+      <p className="text-[10px] text-gray-500 text-center">
+        Get tokens from{' '}
+        <a
+          href="https://developer.twitter.com/en/portal/projects"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          Twitter Developer Portal
+        </a>
+        {' '}→ Your App → Keys and tokens
+      </p>
+    </div>
+  );
+}
+
+interface PlatformCardProps {
+  credential: PlatformCredential;
+  onConnectOAuth1?: (accessToken: string, accessSecret: string, username: string) => void;
+  onDisconnect?: () => void;
+  isLoading?: boolean;
+  authType?: 'oauth1' | 'oauth2' | null;
+}
+
+function PlatformCard({ credential, onConnectOAuth1, onDisconnect, isLoading, authType }: PlatformCardProps) {
   const platformLabels: Record<Platform, string> = {
     instagram: 'Instagram',
     twitter: 'X (Twitter)',
@@ -98,7 +192,7 @@ function PlatformCard({ credential, onConnect, onDisconnect, isLoading }: Platfo
         {credential.isConnected ? (
           <span className="flex items-center gap-1 text-xs text-success">
             <Check size={12} />
-            Connected
+            Connected {authType === 'oauth1' ? '(API Key)' : ''}
           </span>
         ) : isSupported ? (
           <span className="flex items-center gap-1 text-xs text-primary">
@@ -122,23 +216,8 @@ function PlatformCard({ credential, onConnect, onDisconnect, isLoading }: Platfo
             Disconnect
           </Button>
         </div>
-      ) : isSupported ? (
-        <Button
-          variant="secondary"
-          size="sm"
-          className="w-full"
-          onClick={onConnect}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 size={14} className="animate-spin mr-2" />
-              Connecting...
-            </>
-          ) : (
-            'Connect Account'
-          )}
-        </Button>
+      ) : isSupported && onConnectOAuth1 ? (
+        <TwitterCredentialsForm onConnect={onConnectOAuth1} isLoading={isLoading} />
       ) : (
         <Button variant="secondary" size="sm" className="w-full" disabled>
           Coming Soon
@@ -257,9 +336,25 @@ export function AutomationHub() {
     { platform: 'tiktok', isConnected: false },
   ];
 
-  const handleConnectTwitter = () => {
+  const handleConnectTwitterOAuth1 = (accessToken: string, accessSecret: string, username: string) => {
     setIsConnecting(true);
-    connectTwitter();
+    try {
+      setOAuth1Credentials(accessToken, accessSecret, username);
+      setTwitterConnected(true);
+      setTwitterUsername(username);
+      addNotification({
+        type: 'success',
+        title: 'X Connected',
+        message: `Successfully connected @${username}`,
+      });
+    } catch {
+      addNotification({
+        type: 'error',
+        title: 'Connection Failed',
+        message: 'Failed to save credentials',
+      });
+    }
+    setIsConnecting(false);
   };
 
   const handleDisconnectTwitter = () => {
@@ -564,9 +659,10 @@ export function AutomationHub() {
                 <PlatformCard
                   key={credential.platform}
                   credential={credential}
-                  onConnect={credential.platform === 'twitter' ? handleConnectTwitter : undefined}
+                  onConnectOAuth1={credential.platform === 'twitter' ? handleConnectTwitterOAuth1 : undefined}
                   onDisconnect={credential.platform === 'twitter' ? handleDisconnectTwitter : undefined}
                   isLoading={credential.platform === 'twitter' && isConnecting}
+                  authType={credential.platform === 'twitter' ? getTwitterAuthType() : null}
                 />
               ))}
             </div>
