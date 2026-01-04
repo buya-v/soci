@@ -24,6 +24,7 @@ import { hashPassword } from '@/utils/auth';
 export interface ApiKeys {
   anthropic: string;
   openai: string;
+  gemini: string;
 }
 
 export type Theme = 'dark' | 'light' | 'system';
@@ -209,6 +210,7 @@ const defaultPlatformCredentials: PlatformCredential[] = [
 const defaultApiKeys: ApiKeys = {
   anthropic: '',
   openai: '',
+  gemini: '',
 };
 
 const defaultBudgetConfig: BudgetConfig = {

@@ -1,11 +1,17 @@
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { Platform, Persona, Language } from '@/types';
 import { SUPPORTED_LANGUAGES } from '@/types';
 
 // API key management
 let anthropicClient: Anthropic | null = null;
 let openaiClient: OpenAI | null = null;
+let geminiClient: GoogleGenerativeAI | null = null;
+
+// AI Provider preference
+export type AIProvider = 'anthropic' | 'gemini';
+let preferredProvider: AIProvider = 'anthropic';
 
 export function initAnthropicClient(apiKey: string) {
   anthropicClient = new Anthropic({
@@ -21,12 +27,42 @@ export function initOpenAIClient(apiKey: string) {
   });
 }
 
+export function initGeminiClient(apiKey: string) {
+  geminiClient = new GoogleGenerativeAI(apiKey);
+}
+
+export function setPreferredProvider(provider: AIProvider) {
+  preferredProvider = provider;
+}
+
+export function getPreferredProvider(): AIProvider {
+  return preferredProvider;
+}
+
 export function isAnthropicConfigured(): boolean {
   return anthropicClient !== null;
 }
 
 export function isOpenAIConfigured(): boolean {
   return openaiClient !== null;
+}
+
+export function isGeminiConfigured(): boolean {
+  return geminiClient !== null;
+}
+
+// Get the active AI client based on preference and availability
+function getActiveProvider(): AIProvider | null {
+  if (preferredProvider === 'gemini' && geminiClient) {
+    return 'gemini';
+  }
+  if (preferredProvider === 'anthropic' && anthropicClient) {
+    return 'anthropic';
+  }
+  // Fallback: try the other provider
+  if (geminiClient) return 'gemini';
+  if (anthropicClient) return 'anthropic';
+  return null;
 }
 
 // Platform-specific character limits and styles
@@ -79,9 +115,68 @@ export interface GeneratedContent {
   callToAction: string;
 }
 
-export async function generateContent(params: ContentGenerationParams): Promise<GeneratedContent> {
+// Helper to call Gemini API
+async function callGemini(systemPrompt: string, userPrompt: string): Promise<string> {
+  if (!geminiClient) {
+    throw new Error('Gemini API key not configured.');
+  }
+
+  const model = geminiClient.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const result = await model.generateContent({
+    contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+  });
+
+  const response = result.response;
+  const text = response.text();
+
+  // Clean up markdown code blocks if present
+  return text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+}
+
+// Helper to call Anthropic API
+async function callAnthropic(systemPrompt: string, userPrompt: string, maxTokens: number = 1024): Promise<string> {
   if (!anthropicClient) {
-    throw new Error('Anthropic API key not configured. Please add your API key in Settings.');
+    throw new Error('Anthropic API key not configured.');
+  }
+
+  const response = await anthropicClient.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: maxTokens,
+    messages: [{ role: 'user', content: userPrompt }],
+    system: systemPrompt,
+  });
+
+  const textContent = response.content.find((block) => block.type === 'text');
+  if (!textContent || textContent.type !== 'text') {
+    throw new Error('No text content in response');
+  }
+
+  return textContent.text;
+}
+
+// Unified AI call that uses preferred provider
+async function callAI(systemPrompt: string, userPrompt: string, maxTokens: number = 1024): Promise<string> {
+  const provider = getActiveProvider();
+
+  if (!provider) {
+    throw new Error('No AI provider configured. Please add an Anthropic or Gemini API key in Automation settings.');
+  }
+
+  try {
+    if (provider === 'gemini') {
+      return await callGemini(systemPrompt, userPrompt);
+    } else {
+      return await callAnthropic(systemPrompt, userPrompt, maxTokens);
+    }
+  } catch (error) {
+    throw formatApiError(error);
+  }
+}
+
+export async function generateContent(params: ContentGenerationParams): Promise<GeneratedContent> {
+  const provider = getActiveProvider();
+  if (!provider) {
+    throw new Error('No AI provider configured. Please add an Anthropic or Gemini API key in Automation settings.');
   }
 
   const { topic, platform, tone, niche, targetAudience, includeHashtags = true, additionalContext, language = 'en' } = params;
@@ -124,25 +219,10 @@ Respond with this exact JSON structure:
 ${includeHashtags ? `Include 5-8 relevant hashtags that work well for ${languageName}-speaking audiences.` : 'Do not include hashtags.'}
 Make the content authentic, not generic. Avoid clichés. Write in natural, native ${languageName}.`;
 
-  const response = await anthropicClient.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
-    messages: [
-      {
-        role: 'user',
-        content: userPrompt,
-      },
-    ],
-    system: systemPrompt,
-  });
-
-  const textContent = response.content.find((block) => block.type === 'text');
-  if (!textContent || textContent.type !== 'text') {
-    throw new Error('No text content in response');
-  }
+  const responseText = await callAI(systemPrompt, userPrompt, 1024);
 
   try {
-    const parsed = JSON.parse(textContent.text);
+    const parsed = JSON.parse(responseText);
     return {
       caption: parsed.caption || '',
       hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags : [],
@@ -152,7 +232,7 @@ Make the content authentic, not generic. Avoid clichés. Write in natural, nativ
   } catch {
     // If JSON parsing fails, extract content manually
     return {
-      caption: textContent.text.slice(0, platformSettings.maxLength),
+      caption: responseText.slice(0, platformSettings.maxLength),
       hashtags: [],
       hook: '',
       callToAction: '',
@@ -170,8 +250,9 @@ export async function generateContentVariations(
   params: ContentGenerationParams,
   count: number = 3
 ): Promise<ContentVariation[]> {
-  if (!anthropicClient) {
-    throw new Error('Anthropic API key not configured. Please add your API key in Settings.');
+  const provider = getActiveProvider();
+  if (!provider) {
+    throw new Error('No AI provider configured. Please add an Anthropic or Gemini API key in Automation settings.');
   }
 
   const { topic, platform, tone, language = 'en' } = params;
@@ -207,25 +288,10 @@ Respond with this exact JSON structure:
 
 Make each variation distinctly different while staying on topic. Write in natural, native ${languageName}.`;
 
-  const response = await anthropicClient.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 2048,
-    messages: [
-      {
-        role: 'user',
-        content: userPrompt,
-      },
-    ],
-    system: systemPrompt,
-  });
-
-  const textContent = response.content.find((block) => block.type === 'text');
-  if (!textContent || textContent.type !== 'text') {
-    throw new Error('No text content in response');
-  }
+  const responseText = await callAI(systemPrompt, userPrompt, 2048);
 
   try {
-    const parsed = JSON.parse(textContent.text);
+    const parsed = JSON.parse(responseText);
     return parsed.variations || [];
   } catch {
     return [];
@@ -349,18 +415,14 @@ export async function analyzeTrendRelevance(
   niche: string,
   topics: string[]
 ): Promise<TrendAnalysis> {
-  if (!anthropicClient) {
-    throw new Error('Anthropic API key not configured. Please add your API key in Automation settings.');
+  const provider = getActiveProvider();
+  if (!provider) {
+    throw new Error('No AI provider configured. Please add an Anthropic or Gemini API key in Automation settings.');
   }
 
-  try {
-    const response = await anthropicClient.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 512,
-    messages: [
-      {
-        role: 'user',
-        content: `Analyze how relevant this trend is to the given niche and topics.
+  const systemPrompt = 'You are a social media trend analyst. Respond with valid JSON only, no markdown, no code blocks.';
+
+  const userPrompt = `Analyze how relevant this trend is to the given niche and topics.
 
 Trend: "${trend}"
 Niche: "${niche}"
@@ -375,29 +437,19 @@ Respond with this exact JSON structure:
   "bestPlatforms": ["twitter", "linkedin"]
 }
 
-relevanceScore should be 0-100. Only include platforms from: twitter, instagram, linkedin, tiktok, facebook`,
-      },
-    ],
-    system: 'You are a social media trend analyst. Respond with valid JSON only.',
-    });
+relevanceScore should be 0-100. Only include platforms from: twitter, instagram, linkedin, tiktok, facebook`;
 
-    const textContent = response.content.find((block) => block.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text content in response');
-    }
+  const responseText = await callAI(systemPrompt, userPrompt, 512);
 
-    try {
-      return JSON.parse(textContent.text);
-    } catch {
-      return {
-        relevanceScore: 50,
-        reasoning: 'Unable to analyze',
-        suggestedAngles: [],
-        targetAudiences: [],
-        bestPlatforms: ['twitter'],
-      };
-    }
-  } catch (error) {
-    throw formatApiError(error);
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    return {
+      relevanceScore: 50,
+      reasoning: 'Unable to analyze',
+      suggestedAngles: [],
+      targetAudiences: [],
+      bestPlatforms: ['twitter'],
+    };
   }
 }

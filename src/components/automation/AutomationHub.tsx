@@ -16,7 +16,17 @@ import {
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/store/useAppStore';
-import { initAnthropicClient, initOpenAIClient, isAnthropicConfigured, isOpenAIConfigured } from '@/services/ai';
+import {
+  initAnthropicClient,
+  initOpenAIClient,
+  initGeminiClient,
+  isAnthropicConfigured,
+  isOpenAIConfigured,
+  isGeminiConfigured,
+  setPreferredProvider,
+  getPreferredProvider,
+  type AIProvider,
+} from '@/services/ai';
 import {
   isTwitterConnected,
   getTwitterUsername,
@@ -207,6 +217,8 @@ export function AutomationHub() {
   });
   const [anthropicConfigured, setAnthropicConfigured] = useState(false);
   const [openaiConfigured, setOpenaiConfigured] = useState(false);
+  const [geminiConfigured, setGeminiConfigured] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<AIProvider>(getPreferredProvider());
   const [twitterConnected, setTwitterConnected] = useState(false);
   const [twitterUsername, setTwitterUsername] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -271,7 +283,11 @@ export function AutomationHub() {
       initOpenAIClient(apiKeys.openai);
       setOpenaiConfigured(isOpenAIConfigured());
     }
-  }, [apiKeys.anthropic, apiKeys.openai]);
+    if (apiKeys.gemini) {
+      initGeminiClient(apiKeys.gemini);
+      setGeminiConfigured(isGeminiConfigured());
+    }
+  }, [apiKeys.anthropic, apiKeys.openai, apiKeys.gemini]);
 
   const handleAnthropicKeyChange = (key: string) => {
     setApiKey('anthropic', key);
@@ -297,6 +313,29 @@ export function AutomationHub() {
         message: 'DALL-E is now ready for image generation',
       });
     }
+  };
+
+  const handleGeminiKeyChange = (key: string) => {
+    setApiKey('gemini', key);
+    if (key) {
+      initGeminiClient(key);
+      setGeminiConfigured(isGeminiConfigured());
+      addNotification({
+        type: 'success',
+        title: 'Gemini API Key Saved',
+        message: 'Gemini 2.0 Flash is now ready for content generation',
+      });
+    }
+  };
+
+  const handleProviderChange = (provider: AIProvider) => {
+    setSelectedProvider(provider);
+    setPreferredProvider(provider);
+    addNotification({
+      type: 'info',
+      title: 'AI Provider Changed',
+      message: `Now using ${provider === 'anthropic' ? 'Claude (Anthropic)' : 'Gemini (Google)'} for content generation`,
+    });
   };
 
   const updateSetting = (key: keyof AutomationSettings, value: boolean) => {
@@ -446,21 +485,71 @@ export function AutomationHub() {
                 placeholder="sk-ant-..."
               />
               <ApiKeyInput
+                label="Google Gemini API Key"
+                value={apiKeys.gemini || ''}
+                onChange={handleGeminiKeyChange}
+                isConfigured={geminiConfigured}
+                placeholder="AIza..."
+              />
+              <ApiKeyInput
                 label="OpenAI API Key (DALL-E)"
                 value={apiKeys.openai}
                 onChange={handleOpenAIKeyChange}
                 isConfigured={openaiConfigured}
                 placeholder="sk-..."
               />
+
+              {/* Provider Selection */}
+              {(anthropicConfigured || geminiConfigured) && (
+                <div className="pt-4 border-t border-glass-border">
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                    Preferred AI Provider for Content Generation
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => handleProviderChange('anthropic')}
+                      disabled={!anthropicConfigured}
+                      className={`
+                        py-3 px-4 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2
+                        ${selectedProvider === 'anthropic'
+                          ? 'bg-primary/20 text-primary-light border border-primary/30'
+                          : 'bg-white/5 text-gray-400 border border-glass-border hover:border-glass-border-hover'
+                        }
+                        ${!anthropicConfigured ? 'opacity-50 cursor-not-allowed' : ''}
+                      `}
+                    >
+                      <span>Claude</span>
+                      {selectedProvider === 'anthropic' && <Check size={14} />}
+                    </button>
+                    <button
+                      onClick={() => handleProviderChange('gemini')}
+                      disabled={!geminiConfigured}
+                      className={`
+                        py-3 px-4 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2
+                        ${selectedProvider === 'gemini'
+                          ? 'bg-primary/20 text-primary-light border border-primary/30'
+                          : 'bg-white/5 text-gray-400 border border-glass-border hover:border-glass-border-hover'
+                        }
+                        ${!geminiConfigured ? 'opacity-50 cursor-not-allowed' : ''}
+                      `}
+                    >
+                      <span>Gemini</span>
+                      {selectedProvider === 'gemini' && <Check size={14} />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {selectedProvider === 'anthropic'
+                      ? 'Using Claude Sonnet for content generation'
+                      : 'Using Gemini 2.0 Flash for content generation'
+                    }
+                  </p>
+                </div>
+              )}
             </div>
-            {(!anthropicConfigured || !openaiConfigured) && (
+            {(!anthropicConfigured && !geminiConfigured) && (
               <div className="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
                 <p className="text-xs text-warning">
-                  {!anthropicConfigured && !openaiConfigured
-                    ? 'Add API keys to enable AI-powered content generation'
-                    : !anthropicConfigured
-                    ? 'Add Anthropic key for Claude content generation'
-                    : 'Add OpenAI key for DALL-E image generation'}
+                  Add an Anthropic or Gemini API key to enable AI-powered content generation
                 </p>
               </div>
             )}
