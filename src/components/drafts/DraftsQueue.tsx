@@ -33,6 +33,7 @@ import {
   platformConfigs,
 } from '@/services/publishing';
 import { exportPostsToCSV, exportAllDataToJSON } from '@/services/export';
+import { postTweet, isTwitterConnected } from '@/services/twitter';
 import type { Post, Platform, PostStatus, ContentTemplate } from '@/types';
 
 const platformIcons: Record<Platform, string> = {
@@ -1147,7 +1148,72 @@ export function DraftsQueue() {
     }
   };
 
-  const handlePublish = (post: Post) => {
+  const [, setIsPublishing] = useState(false);
+
+  const handlePublish = async (post: Post) => {
+    // For Twitter/X, actually post to the platform
+    if (post.platform === 'twitter') {
+      if (!isTwitterConnected()) {
+        addNotification({
+          type: 'error',
+          title: 'Not Connected',
+          message: 'Please connect your X account in Automation Hub first',
+        });
+        return;
+      }
+
+      setIsPublishing(true);
+
+      // Build the tweet text with hashtags
+      const content = post.content || post.caption || '';
+      const hashtagText = post.hashtags.length > 0
+        ? '\n\n' + post.hashtags.map(t => `#${t}`).join(' ')
+        : '';
+      const tweetText = (content + hashtagText).slice(0, 280);
+
+      const result = await postTweet(tweetText);
+      setIsPublishing(false);
+
+      if (result.success) {
+        updatePost(post.id, {
+          status: 'published',
+          publishedAt: new Date(),
+        });
+        addNotification({
+          type: 'success',
+          title: 'Posted to X',
+          message: `Tweet published successfully!`,
+        });
+        addActivity({
+          id: crypto.randomUUID(),
+          action: 'Post Published',
+          description: `Published tweet to X (@${result.tweet?.id || 'unknown'})`,
+          timestamp: new Date().toISOString(),
+          status: 'success',
+          platform: post.platform,
+        });
+      } else {
+        updatePost(post.id, {
+          status: 'failed',
+        });
+        addNotification({
+          type: 'error',
+          title: 'Publishing Failed',
+          message: result.error || 'Failed to post to X',
+        });
+        addActivity({
+          id: crypto.randomUUID(),
+          action: 'Post Failed',
+          description: `Failed to publish to X: ${result.error}`,
+          timestamp: new Date().toISOString(),
+          status: 'failed',
+          platform: post.platform,
+        });
+      }
+      return;
+    }
+
+    // For other platforms, just mark as published (simulation)
     updatePost(post.id, {
       status: 'published',
       publishedAt: new Date(),
