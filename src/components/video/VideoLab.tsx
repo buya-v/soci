@@ -23,11 +23,9 @@ import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/store/useAppStore';
 import {
   isAnyAIConfigured,
-  initAnthropicClient,
-  initGeminiClient,
   callAI,
   getPreferredProvider,
-} from '@/services/ai';
+} from '@/services/ai-client';
 
 type AspectRatio = '16:9' | '9:16' | '1:1';
 type Resolution = '720p' | '1080p';
@@ -104,15 +102,7 @@ export function VideoLab() {
   // Video generation state
   const [videoGenerationStatus, setVideoGenerationStatus] = useState<string>('');
 
-  // Initialize AI clients
-  useEffect(() => {
-    if (apiKeys.anthropic) {
-      initAnthropicClient(apiKeys.anthropic);
-    }
-    if (apiKeys.gemini) {
-      initGeminiClient(apiKeys.gemini);
-    }
-  }, [apiKeys.anthropic, apiKeys.gemini]);
+  // AI clients now initialized server-side
 
   const aiReady = isAnyAIConfigured();
   const currentProvider = getPreferredProvider();

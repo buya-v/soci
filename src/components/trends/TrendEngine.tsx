@@ -6,10 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/store/useAppStore';
 import {
   analyzeTrendRelevance,
-  isAnthropicConfigured,
-  initAnthropicClient,
   type TrendAnalysis,
-} from '@/services/ai';
+} from '@/services/ai-client';
 import { fetchTrends, trendSources, calculateNicheRelevance } from '@/services/trends';
 import type { Trend } from '@/types';
 
@@ -167,12 +165,7 @@ export function TrendEngine() {
   const [enabledSources, setEnabledSources] = useState<string[]>(['reddit', 'hackernews']);
   const [showSourceSettings, setShowSourceSettings] = useState(false);
 
-  // Initialize Anthropic client
-  useEffect(() => {
-    if (apiKeys.anthropic) {
-      initAnthropicClient(apiKeys.anthropic);
-    }
-  }, [apiKeys.anthropic]);
+  // AI clients now initialized server-side
 
   // Fetch trends on mount
   useEffect(() => {

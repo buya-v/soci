@@ -43,10 +43,8 @@ import {
   generateImage,
   isAnthropicConfigured,
   isOpenAIConfigured,
-  initAnthropicClient,
-  initOpenAIClient,
   type ContentVariation,
-} from '@/services/ai';
+} from '@/services/ai-client';
 import { predictEngagement, suggestHashtags, getNextOptimalTime, getPlatformTips, getContentIdeas, type EngagementPrediction } from '@/services/predictions';
 import { PerformancePrediction } from './PerformancePrediction';
 import { TemplateVariableModal } from './TemplateVariableModal';
@@ -608,15 +606,7 @@ export function ContentLab() {
     setLanguage(getEffectiveLanguage(platform));
   }, [platform]);
 
-  // Initialize clients with stored API keys
-  useEffect(() => {
-    if (apiKeys.anthropic) {
-      initAnthropicClient(apiKeys.anthropic);
-    }
-    if (apiKeys.openai) {
-      initOpenAIClient(apiKeys.openai);
-    }
-  }, [apiKeys.anthropic, apiKeys.openai]);
+  // AI clients now initialized server-side
 
   const anthropicReady = isAnthropicConfigured();
   const openaiReady = isOpenAIConfigured();

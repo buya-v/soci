@@ -17,16 +17,10 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/store/useAppStore';
 import {
-  initAnthropicClient,
-  initOpenAIClient,
-  initGeminiClient,
-  isAnthropicConfigured,
-  isOpenAIConfigured,
-  isGeminiConfigured,
   setPreferredProvider,
   getPreferredProvider,
   type AIProvider,
-} from '@/services/ai';
+} from '@/services/ai-client';
 import {
   isTwitterConnected,
   getTwitterUsername,
@@ -368,60 +362,7 @@ export function AutomationHub() {
     });
   };
 
-  // Initialize AI clients when keys change
-  useEffect(() => {
-    if (apiKeys.anthropic) {
-      initAnthropicClient(apiKeys.anthropic);
-      setAnthropicConfigured(isAnthropicConfigured());
-    }
-    if (apiKeys.openai) {
-      initOpenAIClient(apiKeys.openai);
-      setOpenaiConfigured(isOpenAIConfigured());
-    }
-    if (apiKeys.gemini) {
-      initGeminiClient(apiKeys.gemini);
-      setGeminiConfigured(isGeminiConfigured());
-    }
-  }, [apiKeys.anthropic, apiKeys.openai, apiKeys.gemini]);
-
-  const handleAnthropicKeyChange = (key: string) => {
-    setApiKey('anthropic', key);
-    if (key) {
-      initAnthropicClient(key);
-      setAnthropicConfigured(isAnthropicConfigured());
-      addNotification({
-        type: 'success',
-        title: 'Anthropic API Key Saved',
-        message: 'Claude AI is now ready for content generation',
-      });
-    }
-  };
-
-  const handleOpenAIKeyChange = (key: string) => {
-    setApiKey('openai', key);
-    if (key) {
-      initOpenAIClient(key);
-      setOpenaiConfigured(isOpenAIConfigured());
-      addNotification({
-        type: 'success',
-        title: 'OpenAI API Key Saved',
-        message: 'DALL-E is now ready for image generation',
-      });
-    }
-  };
-
-  const handleGeminiKeyChange = (key: string) => {
-    setApiKey('gemini', key);
-    if (key) {
-      initGeminiClient(key);
-      setGeminiConfigured(isGeminiConfigured());
-      addNotification({
-        type: 'success',
-        title: 'Gemini API Key Saved',
-        message: 'Gemini 2.0 Flash is now ready for content generation',
-      });
-    }
-  };
+  // AI is now configured server-side - no client initialization needed
 
   const handleProviderChange = (provider: AIProvider) => {
     setSelectedProvider(provider);

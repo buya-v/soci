@@ -19,7 +19,7 @@ import type {
   Language,
   Platform,
 } from '@/types';
-import { hashPassword } from '@/utils/auth';
+import { login as loginAPI } from '@/utils/auth';
 
 export interface ApiKeys {
   anthropic: string;
@@ -275,14 +275,9 @@ export const useAppStore = create<AppState>()(
       // Authentication
       isAuthenticated: false,
       login: async (password: string) => {
-        const expectedHash = import.meta.env.VITE_APP_HASH;
-        if (!expectedHash) {
-          // No password configured, allow access
-          set({ isAuthenticated: true });
-          return true;
-        }
-        const inputHash = await hashPassword(password);
-        if (inputHash === expectedHash) {
+        // Use server-side bcrypt authentication
+        const result = await loginAPI(password);
+        if (result.success) {
           set({ isAuthenticated: true });
           return true;
         }

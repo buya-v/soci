@@ -9,6 +9,7 @@ import { NotificationCenter } from './components/ui/NotificationCenter';
 import { CommandPalette, useCommandPalette } from './components/ui/CommandPalette';
 import { DataManager } from './components/settings/DataManager';
 import { Login } from './components/auth/Login';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useTheme } from './hooks/useTheme';
 import { useAppStore } from './store/useAppStore';
@@ -163,19 +164,21 @@ function AppContent() {
 
       {/* Main Content */}
       <main className="lg:ml-64 min-h-screen p-4 lg:p-6 pt-16 lg:pt-6 pb-20 lg:pb-6">
-        <Suspense fallback={<ViewLoadingFallback />}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeView}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              {renderView()}
-            </motion.div>
-          </AnimatePresence>
-        </Suspense>
+        <ErrorBoundary fallbackTitle={`Error in ${activeView}`}>
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeView}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {renderView()}
+              </motion.div>
+            </AnimatePresence>
+          </Suspense>
+        </ErrorBoundary>
       </main>
 
       {/* Toast Notifications */}
@@ -233,9 +236,11 @@ function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AppContent />
-    </QueryClientProvider>
+    <ErrorBoundary fallbackTitle="Application Error">
+      <QueryClientProvider client={queryClient}>
+        <AppContent />
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
