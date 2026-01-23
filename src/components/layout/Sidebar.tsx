@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/ui/NotificationCenter';
+import { HealthIndicator } from '@/components/ui/HealthIndicator';
 import { useAppStore } from '@/store/useAppStore';
 import type { ViewType } from '@/types';
 
@@ -85,21 +86,21 @@ export function Sidebar({ activeView, onViewChange, onShowShortcuts, onShowNotif
                   onClick={() => onViewChange(item.id)}
                   className={`
                     w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
-                    transition-all duration-200 text-left relative
+                    transition-all duration-400 ease-aurora text-left relative
                     ${isActive
-                      ? 'bg-primary/15 text-white'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      ? 'bg-aurora-neon/10 text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5 hover:shadow-glow-soft'
                     }
                   `}
                 >
                   {isActive && (
                     <motion.div
                       layoutId="activeNavBg"
-                      className="absolute inset-0 rounded-lg bg-primary/10 border border-primary/20"
+                      className="absolute inset-0 rounded-lg bg-aurora-neon/10 border border-aurora-neon/20 shadow-glow-soft"
                       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     />
                   )}
-                  <span className={`relative z-10 ${isActive ? 'text-primary-light' : ''}`}>
+                  <span className={`relative z-10 ${isActive ? 'text-aurora-neon' : ''}`}>
                     <Icon size={18} />
                   </span>
                   <span className="relative z-10 text-sm font-medium">{item.label}</span>
@@ -134,11 +135,8 @@ export function Sidebar({ activeView, onViewChange, onShowShortcuts, onShowNotif
           </div>
         </div>
 
-        {/* Status Badge */}
-        <div className="flex items-center gap-2 px-2 py-1">
-          <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
-          <span className="text-[10px] text-gray-500">v2.0 Online</span>
-        </div>
+        {/* Health Status */}
+        <HealthIndicator className="mx-1" />
 
         {/* Logout Button */}
         <button

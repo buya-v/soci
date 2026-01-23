@@ -100,34 +100,59 @@ function AppContent() {
   // Initialize theme
   useTheme();
 
+  // Map view types to friendly names for error boundaries
+  const viewNames: Record<ViewType, string> = {
+    dashboard: 'Growth Hub',
+    trends: 'Trend Radar',
+    content: 'Content Lab',
+    templates: 'Templates',
+    hashtags: 'Hashtags',
+    media: 'Media Library',
+    drafts: 'Queue',
+    published: 'Published',
+    calendar: 'Calendar',
+    video: 'Video Lab',
+    automation: 'Automation',
+    budget: 'Budget',
+  };
+
   const renderView = () => {
+    const wrapWithBoundary = (component: React.ReactNode, viewType: ViewType) => (
+      <ErrorBoundary
+        key={viewType}
+        fallbackTitle={`${viewNames[viewType]} encountered an issue`}
+      >
+        {component}
+      </ErrorBoundary>
+    );
+
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard />;
+        return wrapWithBoundary(<Dashboard />, 'dashboard');
       case 'trends':
-        return <TrendEngine />;
+        return wrapWithBoundary(<TrendEngine />, 'trends');
       case 'content':
-        return <ContentLab />;
+        return wrapWithBoundary(<ContentLab />, 'content');
       case 'templates':
-        return <TemplatesLibrary />;
+        return wrapWithBoundary(<TemplatesLibrary />, 'templates');
       case 'hashtags':
-        return <HashtagCollections />;
+        return wrapWithBoundary(<HashtagCollections />, 'hashtags');
       case 'media':
-        return <MediaLibrary />;
+        return wrapWithBoundary(<MediaLibrary />, 'media');
       case 'drafts':
-        return <DraftsQueue />;
+        return wrapWithBoundary(<DraftsQueue />, 'drafts');
       case 'published':
-        return <PublishedPosts />;
+        return wrapWithBoundary(<PublishedPosts />, 'published');
       case 'calendar':
-        return <CalendarView />;
+        return wrapWithBoundary(<CalendarView />, 'calendar');
       case 'video':
-        return <VideoLab />;
+        return wrapWithBoundary(<VideoLab />, 'video');
       case 'automation':
-        return <AutomationHub />;
+        return wrapWithBoundary(<AutomationHub />, 'automation');
       case 'budget':
-        return <BudgetManager />;
+        return wrapWithBoundary(<BudgetManager />, 'budget');
       default:
-        return <Dashboard />;
+        return wrapWithBoundary(<Dashboard />, 'dashboard');
     }
   };
 

@@ -3,6 +3,19 @@ import { api } from '@/services/api';
 import { useAppStore } from '@/store/useAppStore';
 import type { Platform, Persona, Post } from '@/types';
 
+// Helper to extract error message from various error formats
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'object' && error !== null) {
+    const err = error as Record<string, unknown>;
+    if (typeof err.message === 'string') return err.message;
+    if (typeof err.error === 'string') return err.error;
+  }
+  return fallback;
+}
+
 // Query Keys
 export const queryKeys = {
   trends: ['trends'] as const,
@@ -64,6 +77,7 @@ export function useGenerateContent() {
   const addPost = useAppStore((state) => state.addPost);
   const addActivity = useAppStore((state) => state.addActivity);
   const addNotification = useAppStore((state) => state.addNotification);
+  const addError = useAppStore((state) => state.addError);
 
   return useMutation({
     mutationFn: (params: { topic: string; tone: Persona['tone']; platform: Platform }) =>
@@ -94,11 +108,16 @@ export function useGenerateContent() {
         duration: 5000,
       });
     },
-    onError: () => {
+    onError: (error, variables) => {
+      const message = getErrorMessage(error, 'Content generation failed');
+      addError({
+        message: `Content generation failed for ${variables.platform}: ${message}`,
+        source: 'useGenerateContent',
+      });
       addNotification({
         type: 'error',
         title: 'Generation Failed',
-        message: 'Unable to generate content. Please try again.',
+        message: message.includes('API') ? message : 'Unable to generate content. Please try again.',
         duration: 5000,
       });
     },
@@ -192,6 +211,7 @@ export function usePublishPost() {
 export function useGenerateVideo() {
   const addActivity = useAppStore((state) => state.addActivity);
   const addNotification = useAppStore((state) => state.addNotification);
+  const addError = useAppStore((state) => state.addError);
 
   return useMutation({
     mutationFn: (params: { prompt: string; aspectRatio: string; resolution: string }) =>
@@ -211,11 +231,16 @@ export function useGenerateVideo() {
         duration: 5000,
       });
     },
-    onError: () => {
+    onError: (error) => {
+      const message = getErrorMessage(error, 'Video generation failed');
+      addError({
+        message: `Video generation failed: ${message}`,
+        source: 'useGenerateVideo',
+      });
       addNotification({
         type: 'error',
         title: 'Video Generation Failed',
-        message: 'Unable to generate video. Please try again.',
+        message: message.includes('API') ? message : 'Unable to generate video. Please try again.',
         duration: 5000,
       });
     },
