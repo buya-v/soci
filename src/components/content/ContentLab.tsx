@@ -309,6 +309,86 @@ function Globe({ size, className }: { size: number; className?: string }) {
   );
 }
 
+function FacebookMockup({ post, username = 'SOCI AI' }: MockupProps) {
+  return (
+    <div className="bg-black rounded-[2rem] p-3 max-w-[320px] mx-auto border-4 border-gray-800">
+      <div className="bg-surface rounded-[1.5rem] overflow-hidden">
+        {/* Facebook Header */}
+        <div className="flex items-start gap-3 px-4 py-3 border-b border-glass-border">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1">
+              <p className="text-sm font-semibold text-white">{username}</p>
+              <svg className="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+              </svg>
+            </div>
+            <p className="text-xs text-gray-500">Just now · <span className="inline-flex items-center"><Globe size={10} /></span></p>
+          </div>
+          <MoreHorizontal size={20} className="text-gray-400 shrink-0" />
+        </div>
+
+        {/* Post Content */}
+        <div className="px-4 py-3">
+          {post ? (
+            <>
+              <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">
+                {post.caption.length > 250 ? `${post.caption.slice(0, 250)}...` : post.caption}
+              </p>
+              {post.caption.length > 250 && (
+                <button className="text-sm text-gray-400 hover:text-blue-400 mt-1">See more</button>
+              )}
+              {post.hashtags.length > 0 && (
+                <p className="text-sm text-blue-400 mt-2">
+                  {post.hashtags.slice(0, 5).map(h => `#${h}`).join(' ')}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-gray-500 italic">Your Facebook post will appear here...</p>
+          )}
+        </div>
+
+        {/* Image */}
+        {post?.imageUrl && (
+          <div className="w-full aspect-video bg-gray-900">
+            <img src={post.imageUrl} alt="Post media" className="w-full h-full object-cover" />
+          </div>
+        )}
+
+        {/* Engagement Stats */}
+        <div className="px-4 py-2 flex items-center justify-between text-xs text-gray-500 border-t border-glass-border">
+          <div className="flex items-center gap-1">
+            <span className="flex -space-x-1">
+              <span className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-[8px]">👍</span>
+              <span className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-[8px]">❤️</span>
+              <span className="w-4 h-4 rounded-full bg-yellow-500 flex items-center justify-center text-[8px]">😮</span>
+            </span>
+            <span>2.4K</span>
+          </div>
+          <span>156 comments · 42 shares</span>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-between px-2 py-2 border-t border-glass-border">
+          <button className="flex items-center gap-1 px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
+            <ThumbsUp size={16} className="text-gray-400" />
+            <span className="text-xs text-gray-400">Like</span>
+          </button>
+          <button className="flex items-center gap-1 px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
+            <MessageCircle size={16} className="text-gray-400" />
+            <span className="text-xs text-gray-400">Comment</span>
+          </button>
+          <button className="flex items-center gap-1 px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
+            <Share2 size={16} className="text-gray-400" />
+            <span className="text-xs text-gray-400">Share</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TikTokMockup({ post, username = 'soci_ai' }: MockupProps) {
   return (
     <div className="bg-black rounded-[2rem] p-3 max-w-[320px] mx-auto border-4 border-gray-800">
@@ -1495,6 +1575,7 @@ export function ContentLab() {
                 {platform === 'twitter' && <TwitterMockup post={generatedPost} />}
                 {platform === 'linkedin' && <LinkedInMockup post={generatedPost} />}
                 {platform === 'tiktok' && <TikTokMockup post={generatedPost} />}
+                {platform === 'facebook' && <FacebookMockup post={generatedPost} />}
               </motion.div>
             </AnimatePresence>
 
@@ -1505,6 +1586,7 @@ export function ContentLab() {
                 {platform === 'twitter' && 'Tip: Keep tweets under 280 characters. Use 1-3 hashtags for best engagement.'}
                 {platform === 'linkedin' && 'Tip: Longer posts (500-1000 chars) perform better. Use 3-5 relevant hashtags.'}
                 {platform === 'tiktok' && 'Tip: Keep captions short (under 150 chars). First 3 seconds are crucial for hooks.'}
+                {platform === 'facebook' && 'Tip: Posts with images get 2.3x more engagement. Use 1-2 hashtags and post during evenings.'}
               </p>
             </div>
           </GlassCard>

@@ -37,6 +37,17 @@ import {
   setOAuth1Credentials,
   getTwitterAuthType,
 } from '@/services/twitter';
+import {
+  isFacebookConnected,
+  getFacebookPageName,
+  getFacebookPages,
+  getSelectedFacebookPage,
+  setSelectedFacebookPage,
+  connectFacebook,
+  disconnectFacebook,
+  handleFacebookCallback,
+  type FacebookPage,
+} from '@/services/facebook';
 import type { Platform, Persona, AutomationSettings, PlatformCredential } from '@/types';
 
 const toneOptions: Persona['tone'][] = ['professional', 'casual', 'witty', 'inspirational'];
@@ -162,15 +173,81 @@ function TwitterCredentialsForm({ onConnect, isLoading }: TwitterCredentialsForm
   );
 }
 
+interface FacebookPageSelectorProps {
+  pages: FacebookPage[];
+  selectedPageId: string | null;
+  onSelectPage: (pageId: string) => void;
+  onDisconnect: () => void;
+}
+
+function FacebookPageSelector({ pages, selectedPageId, onSelectPage, onDisconnect }: FacebookPageSelectorProps) {
+  const selectedPage = pages.find(p => p.id === selectedPageId);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-gray-400">
+          {selectedPage?.name || 'Select a page'}
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onDisconnect}
+        >
+          Disconnect
+        </Button>
+      </div>
+      {pages.length > 1 && (
+        <div>
+          <label className="block text-xs font-medium text-gray-400 mb-1">
+            Select Page to Post To
+          </label>
+          <select
+            value={selectedPageId || ''}
+            onChange={(e) => onSelectPage(e.target.value)}
+            className="w-full bg-white/5 border border-glass-border rounded-lg py-2 px-3 text-white focus:border-primary transition-colors text-sm"
+          >
+            {pages.map(page => (
+              <option key={page.id} value={page.id} className="bg-dark-bg">
+                {page.name} ({page.category})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {pages.length === 0 && (
+        <p className="text-xs text-warning">
+          No Facebook Pages found. You need admin access to at least one page.
+        </p>
+      )}
+    </div>
+  );
+}
+
 interface PlatformCardProps {
   credential: PlatformCredential;
   onConnectOAuth1?: (accessToken: string, accessSecret: string, username: string) => void;
+  onConnectOAuth2?: () => void;
   onDisconnect?: () => void;
   isLoading?: boolean;
   authType?: 'oauth1' | 'oauth2' | null;
+  // Facebook-specific props
+  facebookPages?: FacebookPage[];
+  selectedFacebookPageId?: string | null;
+  onSelectFacebookPage?: (pageId: string) => void;
 }
 
-function PlatformCard({ credential, onConnectOAuth1, onDisconnect, isLoading, authType }: PlatformCardProps) {
+function PlatformCard({
+  credential,
+  onConnectOAuth1,
+  onConnectOAuth2,
+  onDisconnect,
+  isLoading,
+  authType,
+  facebookPages,
+  selectedFacebookPageId,
+  onSelectFacebookPage,
+}: PlatformCardProps) {
   const platformLabels: Record<Platform, string> = {
     instagram: 'Instagram',
     twitter: 'X (Twitter)',
@@ -179,7 +256,7 @@ function PlatformCard({ credential, onConnectOAuth1, onDisconnect, isLoading, au
     facebook: 'Facebook',
   };
 
-  const isSupported = credential.platform === 'twitter';
+  const isSupported = credential.platform === 'twitter' || credential.platform === 'facebook';
 
   return (
     <div className={`
@@ -207,19 +284,50 @@ function PlatformCard({ credential, onConnectOAuth1, onDisconnect, isLoading, au
         )}
       </div>
       {credential.isConnected ? (
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">@{credential.username}</span>
+        credential.platform === 'facebook' && facebookPages && onSelectFacebookPage && onDisconnect ? (
+          <FacebookPageSelector
+            pages={facebookPages}
+            selectedPageId={selectedFacebookPageId || null}
+            onSelectPage={onSelectFacebookPage}
+            onDisconnect={onDisconnect}
+          />
+        ) : (
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-400">@{credential.username}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onDisconnect}
+              disabled={isLoading}
+            >
+              Disconnect
+            </Button>
+          </div>
+        )
+      ) : credential.platform === 'twitter' && onConnectOAuth1 ? (
+        <TwitterCredentialsForm onConnect={onConnectOAuth1} isLoading={isLoading} />
+      ) : credential.platform === 'facebook' && onConnectOAuth2 ? (
+        <div className="space-y-3">
           <Button
-            variant="ghost"
+            variant="primary"
             size="sm"
-            onClick={onDisconnect}
+            className="w-full"
+            onClick={onConnectOAuth2}
             disabled={isLoading}
           >
-            Disconnect
+            {isLoading ? (
+              <>
+                <Loader2 size={14} className="animate-spin mr-2" />
+                Connecting...
+              </>
+            ) : (
+              'Connect Facebook Page'
+            )}
           </Button>
+          <p className="text-[10px] text-gray-500 text-center">
+            You&apos;ll need admin access to at least one Facebook Page
+          </p>
         </div>
-      ) : isSupported && onConnectOAuth1 ? (
-        <TwitterCredentialsForm onConnect={onConnectOAuth1} isLoading={isLoading} />
       ) : (
         <Button variant="secondary" size="sm" className="w-full" disabled>
           Coming Soon
@@ -302,24 +410,49 @@ export function AutomationHub() {
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>(getPreferredProvider());
   const [twitterConnected, setTwitterConnected] = useState(() => isTwitterConnected());
   const [twitterUsername, setTwitterUsername] = useState<string | null>(() => getTwitterUsername());
+  const [facebookConnected, setFacebookConnected] = useState(() => isFacebookConnected());
+  const [facebookPageName, setFacebookPageName] = useState<string | null>(() => getFacebookPageName());
+  const [facebookPages, setFacebookPages] = useState<FacebookPage[]>(() => getFacebookPages());
+  const [selectedFacebookPageId, setSelectedFacebookPageId] = useState<string | null>(() => getSelectedFacebookPage()?.id || null);
   const [isConnecting, setIsConnecting] = useState(false);
 
   // Handle OAuth callback on mount
   useEffect(() => {
-    const callbackResult = handleTwitterCallback();
-    if (callbackResult.success) {
+    // Check for Twitter callback
+    const twitterResult = handleTwitterCallback();
+    if (twitterResult.success) {
       setTwitterConnected(true);
-      setTwitterUsername(callbackResult.username || null);
+      setTwitterUsername(twitterResult.username || null);
       addNotification({
         type: 'success',
         title: 'X Connected',
-        message: `Successfully connected @${callbackResult.username}`,
+        message: `Successfully connected @${twitterResult.username}`,
       });
-    } else if (callbackResult.error) {
+    } else if (twitterResult.error) {
       addNotification({
         type: 'error',
         title: 'Connection Failed',
-        message: callbackResult.error,
+        message: twitterResult.error,
+      });
+    }
+
+    // Check for Facebook callback
+    const facebookResult = handleFacebookCallback();
+    if (facebookResult.success) {
+      setFacebookConnected(true);
+      setFacebookPageName(facebookResult.pageName || null);
+      setFacebookPages(getFacebookPages());
+      setSelectedFacebookPageId(getSelectedFacebookPage()?.id || null);
+      addNotification({
+        type: 'success',
+        title: 'Facebook Connected',
+        message: `Successfully connected ${facebookResult.pageName || 'your Facebook page'}`,
+      });
+    } else if (facebookResult.error) {
+      addNotification({
+        type: 'error',
+        title: 'Facebook Connection Failed',
+        message: facebookResult.error,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -328,8 +461,8 @@ export function AutomationHub() {
   // Build platform credentials dynamically
   const platformCredentials: PlatformCredential[] = [
     { platform: 'twitter', isConnected: twitterConnected, username: twitterUsername || undefined },
+    { platform: 'facebook', isConnected: facebookConnected, username: facebookPageName || undefined },
     { platform: 'instagram', isConnected: false },
-    { platform: 'facebook', isConnected: false },
     { platform: 'linkedin', isConnected: false },
     { platform: 'tiktok', isConnected: false },
   ];
@@ -364,6 +497,38 @@ export function AutomationHub() {
       title: 'X Disconnected',
       message: 'Your X account has been disconnected',
     });
+  };
+
+  const handleConnectFacebook = () => {
+    setIsConnecting(true);
+    connectFacebook();
+  };
+
+  const handleDisconnectFacebook = () => {
+    disconnectFacebook();
+    setFacebookConnected(false);
+    setFacebookPageName(null);
+    setFacebookPages([]);
+    setSelectedFacebookPageId(null);
+    addNotification({
+      type: 'info',
+      title: 'Facebook Disconnected',
+      message: 'Your Facebook account has been disconnected',
+    });
+  };
+
+  const handleSelectFacebookPage = (pageId: string) => {
+    setSelectedFacebookPage(pageId);
+    setSelectedFacebookPageId(pageId);
+    const page = facebookPages.find(p => p.id === pageId);
+    if (page) {
+      setFacebookPageName(page.name);
+      addNotification({
+        type: 'info',
+        title: 'Page Selected',
+        message: `Now posting to ${page.name}`,
+      });
+    }
   };
 
   // API Key handlers
@@ -643,9 +808,17 @@ export function AutomationHub() {
                   key={credential.platform}
                   credential={credential}
                   onConnectOAuth1={credential.platform === 'twitter' ? handleConnectTwitterOAuth1 : undefined}
-                  onDisconnect={credential.platform === 'twitter' ? handleDisconnectTwitter : undefined}
-                  isLoading={credential.platform === 'twitter' && isConnecting}
+                  onConnectOAuth2={credential.platform === 'facebook' ? handleConnectFacebook : undefined}
+                  onDisconnect={
+                    credential.platform === 'twitter' ? handleDisconnectTwitter :
+                    credential.platform === 'facebook' ? handleDisconnectFacebook :
+                    undefined
+                  }
+                  isLoading={(credential.platform === 'twitter' || credential.platform === 'facebook') && isConnecting}
                   authType={credential.platform === 'twitter' ? getTwitterAuthType() : null}
+                  facebookPages={credential.platform === 'facebook' ? facebookPages : undefined}
+                  selectedFacebookPageId={credential.platform === 'facebook' ? selectedFacebookPageId : undefined}
+                  onSelectFacebookPage={credential.platform === 'facebook' ? handleSelectFacebookPage : undefined}
                 />
               ))}
             </div>
