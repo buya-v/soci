@@ -49,19 +49,24 @@ export function TemplateVariableModal({
   // Extract variables from template content
   const variables = useMemo(() => extractVariables(template.content), [template.content]);
 
+  // Compute initial values from template
+  const initialValues = useMemo(() => {
+    const vals: Record<string, string> = {};
+    variables.forEach((v) => {
+      const templateVar = template.variables.find((tv) => tv.name === v.name);
+      vals[v.name] = templateVar?.defaultValue || '';
+    });
+    return vals;
+  }, [template, variables]);
+
   // Initialize variable values with defaults from template
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = useState<Record<string, string>>(initialValues);
 
   // Reset values when template changes
   useEffect(() => {
-    const initialValues: Record<string, string> = {};
-    variables.forEach((v) => {
-      // Check if template has a default for this variable
-      const templateVar = template.variables.find((tv) => tv.name === v.name);
-      initialValues[v.name] = templateVar?.defaultValue || '';
-    });
     setValues(initialValues);
-  }, [template, variables]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [template.id]);
 
   // Preview with current values
   const preview = useMemo(() => {

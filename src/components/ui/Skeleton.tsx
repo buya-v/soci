@@ -81,16 +81,19 @@ export function SkeletonStatCard() {
   );
 }
 
+// Deterministic heights for chart bars
+const chartBarHeights = ['65%', '85%', '45%', '90%', '55%', '75%', '40%'];
+
 export function SkeletonChart() {
   return (
     <div className="glass-panel rounded-xl p-6 border border-glass-border">
       <Skeleton height={20} width="30%" className="mb-4" />
       <div className="h-64 flex items-end gap-2">
-        {Array.from({ length: 7 }).map((_, i) => (
+        {chartBarHeights.map((height, i) => (
           <Skeleton
             key={i}
             className="flex-1"
-            height={`${30 + Math.random() * 70}%`}
+            height={height}
           />
         ))}
       </div>

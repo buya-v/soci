@@ -139,7 +139,7 @@ async function postTweetOAuth1(text: string, auth: TwitterAuth): Promise<TweetRe
     }
 
     return { success: true, tweet: data.tweet };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Network error. Please try again.' };
   }
 }

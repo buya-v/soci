@@ -19,8 +19,16 @@ import { useAppStore } from '@/store/useAppStore';
 import {
   setPreferredProvider,
   getPreferredProvider,
+  isAnthropicConfigured,
+  isOpenAIConfigured,
+  isGeminiConfigured,
   type AIProvider,
 } from '@/services/ai-client';
+import {
+  initAnthropicClient,
+  initOpenAIClient,
+  initGeminiClient,
+} from '@/services/ai';
 import {
   isTwitterConnected,
   getTwitterUsername,
@@ -288,17 +296,16 @@ export function AutomationHub() {
     smartScheduling: false,
     autoEngagement: false,
   });
-  const [anthropicConfigured, setAnthropicConfigured] = useState(false);
-  const [openaiConfigured, setOpenaiConfigured] = useState(false);
-  const [geminiConfigured, setGeminiConfigured] = useState(false);
+  const [anthropicConfigured, setAnthropicConfigured] = useState(() => isAnthropicConfigured());
+  const [openaiConfigured, setOpenaiConfigured] = useState(() => isOpenAIConfigured());
+  const [geminiConfigured, setGeminiConfigured] = useState(() => isGeminiConfigured());
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>(getPreferredProvider());
-  const [twitterConnected, setTwitterConnected] = useState(false);
-  const [twitterUsername, setTwitterUsername] = useState<string | null>(null);
+  const [twitterConnected, setTwitterConnected] = useState(() => isTwitterConnected());
+  const [twitterUsername, setTwitterUsername] = useState<string | null>(() => getTwitterUsername());
   const [isConnecting, setIsConnecting] = useState(false);
 
-  // Check Twitter connection status on mount and handle OAuth callback
+  // Handle OAuth callback on mount
   useEffect(() => {
-    // Handle OAuth callback if present
     const callbackResult = handleTwitterCallback();
     if (callbackResult.success) {
       setTwitterConnected(true);
@@ -315,11 +322,8 @@ export function AutomationHub() {
         message: callbackResult.error,
       });
     }
-
-    // Check existing connection
-    setTwitterConnected(isTwitterConnected());
-    setTwitterUsername(getTwitterUsername());
-  }, [addNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Build platform credentials dynamically
   const platformCredentials: PlatformCredential[] = [
@@ -362,7 +366,45 @@ export function AutomationHub() {
     });
   };
 
-  // AI is now configured server-side - no client initialization needed
+  // API Key handlers
+  const handleAnthropicKeyChange = (key: string) => {
+    setApiKey('anthropic', key);
+    if (key) {
+      initAnthropicClient(key);
+      setAnthropicConfigured(isAnthropicConfigured());
+      addNotification({
+        type: 'success',
+        title: 'Anthropic API Key Saved',
+        message: 'Claude AI is now ready for content generation',
+      });
+    }
+  };
+
+  const handleOpenAIKeyChange = (key: string) => {
+    setApiKey('openai', key);
+    if (key) {
+      initOpenAIClient(key);
+      setOpenaiConfigured(isOpenAIConfigured());
+      addNotification({
+        type: 'success',
+        title: 'OpenAI API Key Saved',
+        message: 'DALL-E is now ready for image generation',
+      });
+    }
+  };
+
+  const handleGeminiKeyChange = (key: string) => {
+    setApiKey('gemini', key);
+    if (key) {
+      initGeminiClient(key);
+      setGeminiConfigured(isGeminiConfigured());
+      addNotification({
+        type: 'success',
+        title: 'Gemini API Key Saved',
+        message: 'Gemini 2.0 Flash is now ready for content generation',
+      });
+    }
+  };
 
   const handleProviderChange = (provider: AIProvider) => {
     setSelectedProvider(provider);

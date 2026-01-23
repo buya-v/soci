@@ -385,7 +385,6 @@ function TikTokMockup({ post, username = 'soci_ai' }: MockupProps) {
 
 export function ContentLab() {
   const {
-    apiKeys,
     addNotification,
     addActivity,
     persona,
@@ -462,6 +461,7 @@ export function ContentLab() {
     if (generatedPost && captionHistory !== generatedPost.caption) {
       setGeneratedPost(prev => prev ? { ...prev, caption: captionHistory } : null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [captionHistory]);
 
   // Keyboard shortcuts for undo/redo
@@ -498,6 +498,7 @@ export function ContentLab() {
     if (draftInProgress && !generatedPost) {
       setShowRestoreBanner(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-save draft in progress (debounced)
@@ -575,6 +576,7 @@ export function ContentLab() {
     } else {
       setPrediction(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [generatedPost?.caption, generatedPost?.hashtags, platform]);
 
   // Generate hashtag suggestions

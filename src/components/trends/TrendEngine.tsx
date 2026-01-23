@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/store/useAppStore';
 import {
   analyzeTrendRelevance,
+  isAnthropicConfigured,
   type TrendAnalysis,
 } from '@/services/ai-client';
 import { fetchTrends, trendSources, calculateNicheRelevance } from '@/services/trends';
@@ -156,7 +157,7 @@ function TrendSkeleton() {
 }
 
 export function TrendEngine() {
-  const { apiKeys, persona, setActiveView, addNotification, addActivity } = useAppStore();
+  const { persona, setActiveView, addNotification, addActivity } = useAppStore();
   const [trends, setTrends] = useState<Trend[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -170,6 +171,7 @@ export function TrendEngine() {
   // Fetch trends on mount
   useEffect(() => {
     handleRefresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const anthropicReady = isAnthropicConfigured();
