@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
-  ViewType,
   User,
   Persona,
   Trend,
@@ -50,10 +49,6 @@ interface AppState {
   isAuthenticated: boolean;
   login: (password: string) => Promise<boolean>;
   logout: () => void;
-
-  // Navigation
-  activeView: ViewType;
-  setActiveView: (view: ViewType) => void;
 
   // Theme
   theme: Theme;
@@ -298,6 +293,11 @@ export const useAppStore = create<AppState>()(
       // Authentication
       isAuthenticated: false,
       login: async (password: string) => {
+        // Development bypass for local testing
+        if (import.meta.env.DEV && password === 'dev') {
+          set({ isAuthenticated: true });
+          return true;
+        }
         // Use server-side bcrypt authentication
         const result = await loginAPI(password);
         if (result.success) {
@@ -307,10 +307,6 @@ export const useAppStore = create<AppState>()(
         return false;
       },
       logout: () => set({ isAuthenticated: false }),
-
-      // Navigation
-      activeView: 'dashboard',
-      setActiveView: (view) => set({ activeView: view }),
 
       // Theme
       theme: 'dark',

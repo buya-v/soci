@@ -201,7 +201,6 @@ export type ViewType = 'dashboard' | 'trends' | 'content' | 'templates' | 'hasht
 export interface AppState {
   user: User | null;
   persona: Persona | null;
-  activeView: ViewType;
   isLoading: boolean;
   error: AppError | null;
 }

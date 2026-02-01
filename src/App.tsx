@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sidebar } from './components/layout/Sidebar';
@@ -14,6 +15,7 @@ import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useTheme } from './hooks/useTheme';
 import { useAppStore } from './store/useAppStore';
+import { PATH_TO_VIEW } from './routes';
 import type { ViewType } from './types';
 
 // Lazy load view components for code splitting
@@ -75,13 +77,39 @@ function ViewLoadingFallback() {
   );
 }
 
+// Map view types to friendly names for error boundaries
+const viewNames: Record<ViewType, string> = {
+  dashboard: 'Growth Hub',
+  trends: 'Trend Radar',
+  content: 'Content Lab',
+  templates: 'Templates',
+  hashtags: 'Hashtags',
+  media: 'Media Library',
+  drafts: 'Queue',
+  published: 'Published',
+  calendar: 'Calendar',
+  video: 'Video Lab',
+  automation: 'Automation',
+  budget: 'Budget',
+};
+
+function WrapView({ viewType, children }: { viewType: ViewType; children: React.ReactNode }) {
+  return (
+    <ErrorBoundary fallbackTitle={`${viewNames[viewType]} encountered an issue`}>
+      {children}
+    </ErrorBoundary>
+  );
+}
+
 function AppContent() {
-  const { activeView, setActiveView } = useAppStore();
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showDataManager, setShowDataManager] = useState(false);
   const commandPalette = useCommandPalette();
+
+  const activeView: ViewType = PATH_TO_VIEW[location.pathname] || 'dashboard';
 
   const handleShowHelp = useCallback(() => {
     setShowShortcutsModal(true);
@@ -101,66 +129,14 @@ function AppContent() {
   // Initialize theme
   useTheme();
 
-  // Map view types to friendly names for error boundaries
-  const viewNames: Record<ViewType, string> = {
-    dashboard: 'Growth Hub',
-    trends: 'Trend Radar',
-    content: 'Content Lab',
-    templates: 'Templates',
-    hashtags: 'Hashtags',
-    media: 'Media Library',
-    drafts: 'Queue',
-    published: 'Published',
-    calendar: 'Calendar',
-    video: 'Video Lab',
-    automation: 'Automation',
-    budget: 'Budget',
-  };
-
-  const renderView = () => {
-    const wrapWithBoundary = (component: React.ReactNode, viewType: ViewType) => (
-      <ErrorBoundary
-        key={viewType}
-        fallbackTitle={`${viewNames[viewType]} encountered an issue`}
-      >
-        {component}
-      </ErrorBoundary>
-    );
-
-    switch (activeView) {
-      case 'dashboard':
-        return wrapWithBoundary(<Dashboard />, 'dashboard');
-      case 'trends':
-        return wrapWithBoundary(<TrendEngine />, 'trends');
-      case 'content':
-        return wrapWithBoundary(<ContentLab />, 'content');
-      case 'templates':
-        return wrapWithBoundary(<TemplatesLibrary />, 'templates');
-      case 'hashtags':
-        return wrapWithBoundary(<HashtagCollections />, 'hashtags');
-      case 'media':
-        return wrapWithBoundary(<MediaLibrary />, 'media');
-      case 'drafts':
-        return wrapWithBoundary(<DraftsQueue />, 'drafts');
-      case 'published':
-        return wrapWithBoundary(<PublishedPosts />, 'published');
-      case 'calendar':
-        return wrapWithBoundary(<CalendarView />, 'calendar');
-      case 'video':
-        return wrapWithBoundary(<VideoLab />, 'video');
-      case 'automation':
-        return wrapWithBoundary(<AutomationHub />, 'automation');
-      case 'budget':
-        return wrapWithBoundary(<BudgetManager />, 'budget');
-      default:
-        return wrapWithBoundary(<Dashboard />, 'dashboard');
-    }
-  };
-
-  const handleViewChange = (view: ViewType) => {
-    setActiveView(view);
+  const handleMobileViewChange = useCallback(() => {
     setIsMobileMenuOpen(false);
-  };
+  }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-deep">
@@ -171,8 +147,6 @@ function AppContent() {
       {/* Desktop Sidebar Navigation */}
       <div className="hidden lg:block">
         <Sidebar
-          activeView={activeView}
-          onViewChange={handleViewChange}
           onShowShortcuts={handleShowHelp}
           onShowNotifications={handleShowNotifications}
         />
@@ -181,10 +155,9 @@ function AppContent() {
       {/* Mobile Navigation */}
       <div className="lg:hidden">
         <MobileNav
-          activeView={activeView}
-          onViewChange={handleViewChange}
           isOpen={isMobileMenuOpen}
           onToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onViewChange={handleMobileViewChange}
         />
       </div>
 
@@ -194,13 +167,27 @@ function AppContent() {
           <Suspense fallback={<ViewLoadingFallback />}>
             <AnimatePresence mode="wait">
               <motion.div
-                key={activeView}
+                key={location.pathname}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                {renderView()}
+                <Routes location={location}>
+                  <Route path="/" element={<WrapView viewType="dashboard"><Dashboard /></WrapView>} />
+                  <Route path="/trends" element={<WrapView viewType="trends"><TrendEngine /></WrapView>} />
+                  <Route path="/content" element={<WrapView viewType="content"><ContentLab /></WrapView>} />
+                  <Route path="/templates" element={<WrapView viewType="templates"><TemplatesLibrary /></WrapView>} />
+                  <Route path="/hashtags" element={<WrapView viewType="hashtags"><HashtagCollections /></WrapView>} />
+                  <Route path="/media" element={<WrapView viewType="media"><MediaLibrary /></WrapView>} />
+                  <Route path="/drafts" element={<WrapView viewType="drafts"><DraftsQueue /></WrapView>} />
+                  <Route path="/published" element={<WrapView viewType="published"><PublishedPosts /></WrapView>} />
+                  <Route path="/calendar" element={<WrapView viewType="calendar"><CalendarView /></WrapView>} />
+                  <Route path="/video" element={<WrapView viewType="video"><VideoLab /></WrapView>} />
+                  <Route path="/automation" element={<WrapView viewType="automation"><AutomationHub /></WrapView>} />
+                  <Route path="/budget" element={<WrapView viewType="budget"><BudgetManager /></WrapView>} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
               </motion.div>
             </AnimatePresence>
           </Suspense>
@@ -263,9 +250,11 @@ function App() {
 
   return (
     <ErrorBoundary fallbackTitle="Application Error">
-      <QueryClientProvider client={queryClient}>
-        <AppContent />
-      </QueryClientProvider>
+      <BrowserRouter>
+        <QueryClientProvider client={queryClient}>
+          <AppContent />
+        </QueryClientProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

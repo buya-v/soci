@@ -33,10 +33,12 @@ import {
   Zap,
   Languages,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { useAppStore, getEffectiveLanguage } from '@/store/useAppStore';
+import { VIEW_TO_PATH } from '@/routes';
 import {
   generateContent,
   generateContentVariations,
@@ -464,11 +466,11 @@ function TikTokMockup({ post, username = 'soci_ai' }: MockupProps) {
 }
 
 export function ContentLab() {
+  const navigate = useNavigate();
   const {
     addNotification,
     addActivity,
     persona,
-    setActiveView,
     addPost,
     templates,
     hashtagCollections,
@@ -874,7 +876,7 @@ export function ContentLab() {
   };
 
   const handleGoToSettings = () => {
-    setActiveView('automation');
+    navigate(VIEW_TO_PATH['automation']);
   };
 
   const handleGenerateVariations = async () => {
@@ -1229,7 +1231,7 @@ export function ContentLab() {
               </AnimatePresence>
               {availableTemplates.length === 0 && (
                 <p className="text-xs text-gray-500 mt-1">
-                  No templates for {platform}. <button onClick={() => setActiveView('templates')} className="text-primary hover:underline">Create one</button>
+                  No templates for {platform}. <button onClick={() => navigate(VIEW_TO_PATH['templates'])} className="text-primary hover:underline">Create one</button>
                 </p>
               )}
             </div>
@@ -1286,7 +1288,7 @@ export function ContentLab() {
               </AnimatePresence>
               {availableHashtagCollections.length === 0 && (
                 <p className="text-xs text-gray-500 mt-1">
-                  No collections for {platform}. <button onClick={() => setActiveView('hashtags')} className="text-primary hover:underline">Create one</button>
+                  No collections for {platform}. <button onClick={() => navigate(VIEW_TO_PATH['hashtags'])} className="text-primary hover:underline">Create one</button>
                 </p>
               )}
             </div>

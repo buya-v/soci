@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
@@ -21,11 +22,10 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/ui/NotificationCenter';
 import { HealthIndicator } from '@/components/ui/HealthIndicator';
 import { useAppStore } from '@/store/useAppStore';
+import { VIEW_TO_PATH } from '@/routes';
 import type { ViewType } from '@/types';
 
 interface SidebarProps {
-  activeView: ViewType;
-  onViewChange: (view: ViewType) => void;
   onShowShortcuts?: () => void;
   onShowNotifications?: () => void;
 }
@@ -51,8 +51,10 @@ const navItems: NavItem[] = [
   { id: 'automation', label: 'Automation', icon: Settings },
 ];
 
-export function Sidebar({ activeView, onViewChange, onShowShortcuts, onShowNotifications }: SidebarProps) {
+export function Sidebar({ onShowShortcuts, onShowNotifications }: SidebarProps) {
   const logout = useAppStore((state) => state.logout);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   return (
     <motion.aside
@@ -78,12 +80,13 @@ export function Sidebar({ activeView, onViewChange, onShowShortcuts, onShowNotif
       <nav className="flex-1 p-3 overflow-y-auto">
         <ul className="space-y-1">
           {navItems.map((item) => {
-            const isActive = activeView === item.id;
+            const path = VIEW_TO_PATH[item.id];
+            const isActive = location.pathname === path;
             const Icon = item.icon;
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => onViewChange(item.id)}
+                  onClick={() => navigate(path)}
                   className={`
                     w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
                     transition-all duration-400 ease-aurora text-left relative

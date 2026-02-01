@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Search, RefreshCw, ExternalLink, Sparkles, Loader2, Brain, Globe, Settings2 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/store/useAppStore';
+import { VIEW_TO_PATH } from '@/routes';
 import {
   analyzeTrendRelevance,
   isAnthropicConfigured,
@@ -157,7 +159,8 @@ function TrendSkeleton() {
 }
 
 export function TrendEngine() {
-  const { persona, setActiveView, addNotification, addActivity } = useAppStore();
+  const navigate = useNavigate();
+  const { persona, addNotification, addActivity } = useAppStore();
   const [trends, setTrends] = useState<Trend[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -301,7 +304,7 @@ export function TrendEngine() {
 
   const handleDraftPost = (trend: Trend) => {
     // Navigate to content lab with the trend topic
-    setActiveView('content');
+    navigate(VIEW_TO_PATH['content']);
     addNotification({
       type: 'info',
       title: 'Topic Ready',

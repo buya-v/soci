@@ -45,13 +45,15 @@ import {
   exportAnalyticsToPDF,
   exportAllDataToJSON,
 } from '@/services/export';
+import { useNavigate } from 'react-router-dom';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { SkeletonStatCard, SkeletonChart, SkeletonActivityItem } from '@/components/ui/Skeleton';
 import { useAnalytics, useActivities } from '@/hooks/useApi';
 import { useAppStore } from '@/store/useAppStore';
+import { VIEW_TO_PATH } from '@/routes';
 import { formatDistanceToNow } from 'date-fns';
-import type { ActivityLog, Platform, Post, AnalyticsData } from '@/types';
+import type { ActivityLog, Platform, Post, AnalyticsData, ViewType } from '@/types';
 
 interface StatCardProps {
   title: string;
@@ -162,7 +164,7 @@ function QuickSearch({
   posts: Post[];
   templates: { id: string; name: string; category: string }[];
   hashtagCollections: { id: string; name: string; hashtags: string[] }[];
-  onNavigate: (view: 'drafts' | 'templates' | 'hashtags') => void;
+  onNavigate: (view: ViewType) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -676,17 +678,19 @@ function ExportDropdown({
 export function Dashboard() {
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
   const { data: serverActivities, isLoading: activitiesLoading } = useActivities();
+  const navigateTo = useNavigate();
   const {
     activities: storeActivities,
     posts,
     templates,
     hashtagCollections,
-    setActiveView,
     isAutonomousModeActive,
     emergencyStopTriggeredAt,
     budgetConfig,
     budgetSpends,
   } = useAppStore();
+
+  const setActiveView = (view: ViewType) => navigateTo(VIEW_TO_PATH[view]);
 
   // Get top templates by usage
   const topTemplates = [...templates]

@@ -29,9 +29,11 @@ import {
   parseISO,
   getHours,
 } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/store/useAppStore';
+import { VIEW_TO_PATH } from '@/routes';
 import type { Post, Platform } from '@/types';
 import {
   getOptimalSlotsForDay,
@@ -399,7 +401,8 @@ function WeekView({
 }
 
 export function CalendarView() {
-  const { posts, updatePost, deletePost, addNotification, addPersistentNotification, setActiveView } = useAppStore();
+  const navigate = useNavigate();
+  const { posts, updatePost, deletePost, addNotification, addPersistentNotification } = useAppStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
@@ -520,7 +523,7 @@ export function CalendarView() {
           <p className="text-gray-400">Schedule and manage your posts</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="secondary" onClick={() => setActiveView('content')}>
+          <Button variant="secondary" onClick={() => navigate(VIEW_TO_PATH['content'])}>
             <Plus size={16} />
             Create Post
           </Button>
@@ -648,7 +651,7 @@ export function CalendarView() {
           <div className="text-center py-8">
             <CalendarIcon size={48} className="mx-auto mb-4 text-gray-600" />
             <p className="text-gray-400 mb-2">No scheduled posts</p>
-            <Button variant="primary" size="sm" onClick={() => setActiveView('drafts')}>
+            <Button variant="primary" size="sm" onClick={() => navigate(VIEW_TO_PATH['drafts'])}>
               Schedule from Drafts
             </Button>
           </div>

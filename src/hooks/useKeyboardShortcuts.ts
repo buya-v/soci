@@ -1,5 +1,7 @@
 import { useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
+import { VIEW_TO_PATH } from '@/routes';
 import type { ViewType } from '@/types';
 
 interface ShortcutConfig {
@@ -25,17 +27,18 @@ export const shortcuts: Omit<ShortcutConfig, 'action'>[] = [
 ];
 
 export function useKeyboardShortcuts(onShowHelp?: () => void) {
-  const { setActiveView, addNotification } = useAppStore();
+  const navigate = useNavigate();
+  const { addNotification } = useAppStore();
 
   const handleNavigation = useCallback((view: ViewType, name: string) => {
-    setActiveView(view);
+    navigate(VIEW_TO_PATH[view]);
     addNotification({
       type: 'info',
       title: 'Navigation',
       message: `Switched to ${name}`,
       duration: 1500,
     });
-  }, [setActiveView, addNotification]);
+  }, [navigate, addNotification]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
