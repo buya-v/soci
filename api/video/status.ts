@@ -29,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Get the operation status
     const operation = await ai.operations.getVideosOperation({
-      operation: { name: operationName },
+      operation: { name: operationName } as never,
     });
 
     if (operation.done) {
