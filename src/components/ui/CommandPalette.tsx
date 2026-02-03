@@ -19,7 +19,9 @@ import {
   ArrowRight,
   HardDrive,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
+import { VIEW_TO_PATH } from '@/routes';
 
 interface Command {
   id: string;
@@ -50,7 +52,9 @@ export function CommandPalette({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const { setActiveView, theme, setTheme } = useAppStore();
+  const navigateTo = useNavigate();
+  const { theme, setTheme } = useAppStore();
+  const setActiveView = useCallback((view: string) => navigateTo(VIEW_TO_PATH[view as keyof typeof VIEW_TO_PATH]), [navigateTo]);
 
   const toggleTheme = useCallback(() => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -446,29 +450,4 @@ export function CommandPalette({
       )}
     </AnimatePresence>
   );
-}
-
-// Hook to handle Cmd+K shortcut
-export function useCommandPalette() {
-  const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd+K or Ctrl+K
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setIsOpen(prev => !prev);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  return {
-    isOpen,
-    open: () => setIsOpen(true),
-    close: () => setIsOpen(false),
-    toggle: () => setIsOpen(prev => !prev),
-  };
 }

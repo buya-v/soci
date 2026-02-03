@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Search, RefreshCw, ExternalLink, Sparkles, Loader2, Brain, Globe, Settings2 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/store/useAppStore';
+import { VIEW_TO_PATH } from '@/routes';
 import {
   analyzeTrendRelevance,
   isAnthropicConfigured,
-  initAnthropicClient,
   type TrendAnalysis,
-} from '@/services/ai';
+} from '@/services/ai-client';
 import { fetchTrends, trendSources, calculateNicheRelevance } from '@/services/trends';
 import type { Trend } from '@/types';
 
@@ -158,7 +159,8 @@ function TrendSkeleton() {
 }
 
 export function TrendEngine() {
-  const { apiKeys, persona, setActiveView, addNotification, addActivity } = useAppStore();
+  const navigate = useNavigate();
+  const { persona, addNotification, addActivity } = useAppStore();
   const [trends, setTrends] = useState<Trend[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -167,16 +169,12 @@ export function TrendEngine() {
   const [enabledSources, setEnabledSources] = useState<string[]>(['reddit', 'hackernews']);
   const [showSourceSettings, setShowSourceSettings] = useState(false);
 
-  // Initialize Anthropic client
-  useEffect(() => {
-    if (apiKeys.anthropic) {
-      initAnthropicClient(apiKeys.anthropic);
-    }
-  }, [apiKeys.anthropic]);
+  // AI clients now initialized server-side
 
   // Fetch trends on mount
   useEffect(() => {
     handleRefresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const anthropicReady = isAnthropicConfigured();
@@ -306,7 +304,7 @@ export function TrendEngine() {
 
   const handleDraftPost = (trend: Trend) => {
     // Navigate to content lab with the trend topic
-    setActiveView('content');
+    navigate(VIEW_TO_PATH['content']);
     addNotification({
       type: 'info',
       title: 'Topic Ready',

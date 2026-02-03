@@ -34,6 +34,7 @@ import {
 } from '@/services/publishing';
 import { exportPostsToCSV, exportAllDataToJSON } from '@/services/export';
 import { postTweet, isTwitterConnected } from '@/services/twitter';
+import { postToFacebook, isFacebookConnected, getSelectedFacebookPage } from '@/services/facebook';
 import type { Post, Platform, PostStatus, ContentTemplate } from '@/types';
 
 const platformIcons: Record<Platform, string> = {
@@ -1213,6 +1214,81 @@ export function DraftsQueue() {
       return;
     }
 
+    // For Facebook, post to the connected Page
+    if (post.platform === 'facebook') {
+      if (!isFacebookConnected()) {
+        addNotification({
+          type: 'error',
+          title: 'Not Connected',
+          message: 'Please connect your Facebook Page in Automation Hub first',
+        });
+        return;
+      }
+
+      const selectedPage = getSelectedFacebookPage();
+      if (!selectedPage) {
+        addNotification({
+          type: 'error',
+          title: 'No Page Selected',
+          message: 'Please select a Facebook Page in Automation Hub first',
+        });
+        return;
+      }
+
+      setIsPublishing(true);
+
+      // Build the post content with hashtags
+      const content = post.content || post.caption || '';
+      const hashtagText = post.hashtags.length > 0
+        ? '\n\n' + post.hashtags.map(t => `#${t}`).join(' ')
+        : '';
+      const postMessage = content + hashtagText;
+
+      const result = await postToFacebook({
+        message: postMessage,
+        photoUrl: post.imageUrl,
+      });
+      setIsPublishing(false);
+
+      if (result.success) {
+        updatePost(post.id, {
+          status: 'published',
+          publishedAt: new Date(),
+        });
+        addNotification({
+          type: 'success',
+          title: 'Posted to Facebook',
+          message: `Post published to ${selectedPage.name}!`,
+        });
+        addActivity({
+          id: crypto.randomUUID(),
+          action: 'Post Published',
+          description: `Published to Facebook Page "${selectedPage.name}"`,
+          timestamp: new Date().toISOString(),
+          status: 'success',
+          platform: post.platform,
+        });
+      } else {
+        updatePost(post.id, {
+          status: 'failed',
+        });
+        addNotification({
+          type: 'error',
+          title: 'Publishing Failed',
+          message: result.error || 'Failed to post to Facebook',
+        });
+        addActivity({
+          id: crypto.randomUUID(),
+          action: 'Post Failed',
+          description: `Failed to publish to Facebook: ${result.error}`,
+          timestamp: new Date().toISOString(),
+          status: 'failed',
+          platform: post.platform,
+        });
+      }
+      return;
+    }
+
     // For other platforms, just mark as published (simulation)
     updatePost(post.id, {
       status: 'published',
@@ -1341,6 +1417,7 @@ export function DraftsQueue() {
           >
             <option value="all">All Platforms</option>
             <option value="twitter">Twitter / X</option>
+            <option value="facebook">Facebook</option>
             <option value="linkedin">LinkedIn</option>
             <option value="instagram">Instagram</option>
             <option value="tiktok">TikTok</option>

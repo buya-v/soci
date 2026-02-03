@@ -8,7 +8,9 @@ import {
   Settings,
   Trash2,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
+import { VIEW_TO_PATH } from '@/routes';
 import { formatDistanceToNow } from 'date-fns';
 
 export interface PersistentNotification {
@@ -42,12 +44,12 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
+  const navigate = useNavigate();
   const {
     persistentNotifications,
     markNotificationRead,
     markAllNotificationsRead,
     clearAllNotifications,
-    setActiveView
   } = useAppStore();
 
   const unreadCount = persistentNotifications.filter(n => !n.read).length;
@@ -57,11 +59,11 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
     if (notification.actionUrl) {
       // Handle navigation based on category
       if (notification.category === 'post') {
-        setActiveView('drafts');
+        navigate(VIEW_TO_PATH['drafts']);
       } else if (notification.category === 'trend') {
-        setActiveView('trends');
+        navigate(VIEW_TO_PATH['trends']);
       } else if (notification.category === 'schedule') {
-        setActiveView('drafts');
+        navigate(VIEW_TO_PATH['drafts']);
       }
     }
     onClose();

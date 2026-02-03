@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
@@ -15,13 +16,13 @@ import {
   Image,
   Calendar,
 } from 'lucide-react';
+import { VIEW_TO_PATH } from '@/routes';
 import type { ViewType } from '@/types';
 
 interface MobileNavProps {
-  activeView: ViewType;
-  onViewChange: (view: ViewType) => void;
   isOpen: boolean;
   onToggle: () => void;
+  onViewChange?: () => void;
 }
 
 interface NavItem {
@@ -43,7 +44,15 @@ const navItems: NavItem[] = [
   { id: 'automation', label: 'Automation', icon: Settings },
 ];
 
-export function MobileNav({ activeView, onViewChange, isOpen, onToggle }: MobileNavProps) {
+export function MobileNav({ isOpen, onToggle, onViewChange }: MobileNavProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleNavigate = (id: ViewType) => {
+    navigate(VIEW_TO_PATH[id]);
+    onViewChange?.();
+  };
+
   return (
     <>
       {/* Fixed Header */}
@@ -88,12 +97,13 @@ export function MobileNav({ activeView, onViewChange, isOpen, onToggle }: Mobile
               <div className="p-3">
                 <ul className="space-y-1">
                   {navItems.map((item) => {
-                    const isActive = activeView === item.id;
+                    const path = VIEW_TO_PATH[item.id];
+                    const isActive = location.pathname === path;
                     const Icon = item.icon;
                     return (
                       <li key={item.id}>
                         <button
-                          onClick={() => onViewChange(item.id)}
+                          onClick={() => handleNavigate(item.id)}
                           className={`
                             w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
                             transition-all duration-200 text-left
@@ -129,12 +139,13 @@ export function MobileNav({ activeView, onViewChange, isOpen, onToggle }: Mobile
       <nav className="fixed bottom-0 left-0 right-0 glass-panel border-t border-glass-border z-40">
         <div className="flex justify-around items-center h-16 px-1 pb-safe">
           {navItems.slice(0, 5).map((item) => {
-            const isActive = activeView === item.id;
+            const path = VIEW_TO_PATH[item.id];
+            const isActive = location.pathname === path;
             const Icon = item.icon;
             return (
               <button
                 key={item.id}
-                onClick={() => onViewChange(item.id)}
+                onClick={() => handleNavigate(item.id)}
                 className={`
                   flex flex-col items-center justify-center py-1.5 px-3 rounded-lg min-w-[56px]
                   transition-all duration-200

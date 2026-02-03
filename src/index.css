@@ -2,15 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark theme (default) */
+/* Dark theme (default) - Midnight Aurora 2.0 */
 :root,
 .dark {
-  --bg-deep: #030712;
-  --surface: #111827;
-  --glass-bg: rgba(17, 24, 39, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-border-hover: rgba(255, 255, 255, 0.2);
+  --bg-deep: #050508;
+  --surface: #0a0a10;
+  --glass-bg: rgba(20, 20, 30, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(255, 255, 255, 0.15);
   --primary: #6366f1;
+  --aurora-neon: #00FFC2;
+  --aurora-purple: #9D50BB;
   --accent-purple: #a855f7;
   --accent-pink: #ec4899;
   --text-primary: #f9fafb;
@@ -18,8 +20,10 @@
   --text-muted: #6b7280;
   --success: #22c55e;
   --warning: #eab308;
-  --critical: #ef4444;
-  --card-bg: rgba(17, 24, 39, 0.5);
+  --critical: #FF4B2B;
+  --card-bg: rgba(20, 20, 30, 0.5);
+  --glow-soft: 0 0 20px rgba(0, 255, 194, 0.15);
+  --glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
 }
 
 /* Light theme */
@@ -30,6 +34,8 @@
   --glass-border: rgba(0, 0, 0, 0.1);
   --glass-border-hover: rgba(0, 0, 0, 0.2);
   --primary: #4f46e5;
+  --aurora-neon: #00B894;
+  --aurora-purple: #8E44AD;
   --accent-purple: #9333ea;
   --accent-pink: #db2777;
   --text-primary: #111827;
@@ -39,6 +45,8 @@
   --warning: #ca8a04;
   --critical: #dc2626;
   --card-bg: rgba(255, 255, 255, 0.7);
+  --glow-soft: 0 0 20px rgba(0, 184, 148, 0.1);
+  --glow-primary: 0 0 20px rgba(79, 70, 229, 0.2);
 }
 
 body {
@@ -61,7 +69,7 @@ body {
   left: -10%;
   width: 40%;
   height: 40%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0, 255, 194, 0.08) 0%, transparent 70%);
 }
 
 .bg-glow-purple {
@@ -69,7 +77,7 @@ body {
   right: -10%;
   width: 50%;
   height: 50%;
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(157, 80, 187, 0.08) 0%, transparent 70%);
 }
 
 /* Custom Scrollbar for Webkit */
@@ -114,11 +122,11 @@ body {
 }
 
 .light .bg-glow-primary {
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0, 184, 148, 0.06) 0%, transparent 70%);
 }
 
 .light .bg-glow-purple {
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.06) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(142, 68, 173, 0.05) 0%, transparent 70%);
 }
 
 /* Gradient text effect */
@@ -315,20 +323,46 @@ select:focus {
   transition: all 0.15s ease;
 }
 
-/* Card hover effect - unified */
+.transition-aurora {
+  transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Color transitions for hover states */
+.transition-colors-smooth {
+  transition: color 400ms cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 400ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 400ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card hover effect - unified with aurora lift */
 .card-hover {
-  transition: all 0.2s ease;
+  transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-hover:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   border-color: var(--glass-border-hover);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), var(--glow-soft);
 }
 
 /* Button hover glow effect */
 .btn-glow:hover {
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  box-shadow: var(--glow-primary);
+}
+
+/* Aurora neon button glow */
+.btn-aurora:hover {
+  box-shadow: var(--glow-soft);
+}
+
+/* Shadow glow utilities */
+.shadow-glow-soft {
+  box-shadow: var(--glow-soft);
+}
+
+.shadow-glow-primary {
+  box-shadow: var(--glow-primary);
 }
 
 /* Icon button styling */

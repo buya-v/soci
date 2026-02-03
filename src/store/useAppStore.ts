@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
-  ViewType,
   User,
   Persona,
   Trend,
@@ -19,7 +18,7 @@ import type {
   Language,
   Platform,
 } from '@/types';
-import { hashPassword } from '@/utils/auth';
+import { login as loginAPI } from '@/utils/auth';
 
 export interface ApiKeys {
   anthropic: string;
@@ -29,15 +28,27 @@ export interface ApiKeys {
 
 export type Theme = 'dark' | 'light' | 'system';
 
+// Error tracking types
+export interface AppError {
+  id: string;
+  message: string;
+  stack?: string;
+  timestamp: string;
+  source?: string;
+  resolved: boolean;
+}
+
+export interface ErrorState {
+  errors: AppError[];
+  lastError: AppError | null;
+  isRecoveryMode: boolean;
+}
+
 interface AppState {
   // Authentication
   isAuthenticated: boolean;
   login: (password: string) => Promise<boolean>;
   logout: () => void;
-
-  // Navigation
-  activeView: ViewType;
-  setActiveView: (view: ViewType) => void;
 
   // Theme
   theme: Theme;
@@ -150,6 +161,13 @@ interface AppState {
   // Language Settings
   setDefaultLanguage: (language: Language) => void;
   setPlatformLanguage: (platform: Platform, language: Language | null) => void;
+
+  // Error State
+  errorState: ErrorState;
+  addError: (error: Omit<AppError, 'id' | 'timestamp' | 'resolved'>) => void;
+  clearErrors: () => void;
+  resolveError: (id: string) => void;
+  setRecoveryMode: (active: boolean) => void;
 }
 
 interface DraftInProgress {
@@ -275,24 +293,20 @@ export const useAppStore = create<AppState>()(
       // Authentication
       isAuthenticated: false,
       login: async (password: string) => {
-        const expectedHash = import.meta.env.VITE_APP_HASH;
-        if (!expectedHash) {
-          // No password configured, allow access
+        // Development bypass for local testing
+        if (import.meta.env.DEV && password === 'dev') {
           set({ isAuthenticated: true });
           return true;
         }
-        const inputHash = await hashPassword(password);
-        if (inputHash === expectedHash) {
+        // Use server-side bcrypt authentication
+        const result = await loginAPI(password);
+        if (result.success) {
           set({ isAuthenticated: true });
           return true;
         }
         return false;
       },
       logout: () => set({ isAuthenticated: false }),
-
-      // Navigation
-      activeView: 'dashboard',
-      setActiveView: (view) => set({ activeView: view }),
 
       // Theme
       theme: 'dark',
@@ -612,6 +626,70 @@ export const useAppStore = create<AppState>()(
             persona: { ...state.persona, platformLanguages },
           };
         }),
+
+      // Error State
+      errorState: {
+        errors: [],
+        lastError: null,
+        isRecoveryMode: false,
+      },
+      addError: (error) =>
+        set((state) => {
+          const now = Date.now();
+          // Deduplication: prevent same error within 5 seconds
+          const isDuplicate = state.errorState.errors.some(
+            (e) =>
+              e.message === error.message &&
+              now - new Date(e.timestamp).getTime() < 5000
+          );
+          if (isDuplicate) {
+            console.warn('[SOCI-ERR] Duplicate error suppressed:', error.message);
+            return {};
+          }
+
+          const newError: AppError = {
+            id: crypto.randomUUID(),
+            message: error.message,
+            stack: error.stack,
+            source: error.source,
+            timestamp: new Date().toISOString(),
+            resolved: false,
+          };
+
+          console.error('[SOCI-ERR]', newError.message, error.stack || '');
+
+          return {
+            errorState: {
+              ...state.errorState,
+              errors: [newError, ...state.errorState.errors].slice(0, 20), // Keep last 20
+              lastError: newError,
+            },
+          };
+        }),
+      clearErrors: () =>
+        set((state) => ({
+          errorState: {
+            ...state.errorState,
+            errors: [],
+            lastError: null,
+          },
+        })),
+      resolveError: (id) =>
+        set((state) => ({
+          errorState: {
+            ...state.errorState,
+            errors: state.errorState.errors.map((e) =>
+              e.id === id ? { ...e, resolved: true } : e
+            ),
+          },
+        })),
+      setRecoveryMode: (active) =>
+        set((state) => ({
+          errorState: {
+            ...state.errorState,
+            isRecoveryMode: active,
+          },
+        })),
     }),
     {
       name: 'soci-storage-v2',
