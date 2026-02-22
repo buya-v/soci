@@ -342,6 +342,138 @@ relevanceScore should be 0-100. Only include platforms from: twitter, instagram,
   }
 }
 
+/**
+ * Generate a marketing plan from a brief
+ */
+export interface MarketingPlanGenerationParams {
+  brief: string;
+  goal?: string;
+  niche?: string;
+  targetAudience?: string;
+  tone?: Persona['tone'];
+  topics?: string[];
+  platforms: Platform[];
+  monthlyBudget?: number;
+}
+
+export interface GeneratedPlanData {
+  summary: string;
+  platforms: {
+    platform: Platform;
+    postCount: number;
+    frequency: string;
+    themes: string[];
+  }[];
+  posts: {
+    platform: Platform;
+    topic: string;
+    theme: string;
+    suggestedCaption: string;
+    suggestedHashtags: string[];
+    dayOffset: number;
+    timeOfDay: 'morning' | 'afternoon' | 'evening';
+  }[];
+  durationDays: number;
+  budgetAllocations: {
+    category: string;
+    amount: number;
+    rationale: string;
+  }[];
+}
+
+export async function generateMarketingPlan(params: MarketingPlanGenerationParams): Promise<GeneratedPlanData> {
+  const {
+    brief,
+    goal,
+    niche,
+    targetAudience,
+    tone = 'professional',
+    topics = [],
+    platforms,
+    monthlyBudget,
+  } = params;
+
+  const systemPrompt = `You are an expert social media strategist who creates comprehensive marketing plans.
+
+Your expertise:
+- Platform-specific content strategy for ${platforms.join(', ')}
+- Audience targeting and engagement optimization
+- Budget allocation across marketing channels
+- Content calendar planning and scheduling
+
+Output format: Respond with valid JSON only, no markdown, no code blocks.
+Keep post captions authentic and platform-optimized. Generate realistic, actionable plans.`;
+
+  const userPrompt = `Create a marketing plan based on this brief:
+
+"${brief}"
+
+Context:
+- Goal: ${goal || 'general engagement'}
+- Niche: ${niche || 'general'}
+- Target audience: ${targetAudience || 'general audience'}
+- Tone: ${tone}
+- Topics of interest: ${topics.length > 0 ? topics.join(', ') : 'flexible'}
+- Available platforms: ${platforms.join(', ')}
+- Monthly budget: $${monthlyBudget || 0}
+
+Respond with this exact JSON structure:
+{
+  "summary": "A 2-3 sentence overview of the plan strategy",
+  "platforms": [
+    {
+      "platform": "instagram",
+      "postCount": 8,
+      "frequency": "2x per week",
+      "themes": ["educational", "behind-the-scenes"]
+    }
+  ],
+  "posts": [
+    {
+      "platform": "instagram",
+      "topic": "Specific post topic",
+      "theme": "educational",
+      "suggestedCaption": "Full caption text optimized for the platform",
+      "suggestedHashtags": ["relevant", "hashtags"],
+      "dayOffset": 0,
+      "timeOfDay": "morning"
+    }
+  ],
+  "durationDays": 30,
+  "budgetAllocations": [
+    {
+      "category": "content_boost",
+      "amount": 100,
+      "rationale": "Why this allocation makes sense"
+    }
+  ]
+}
+
+Rules:
+- Generate 10-20 posts spread across the duration
+- Each post must have a complete, platform-optimized caption
+- Use dayOffset (0 = start day, 1 = next day, etc.) for scheduling
+- timeOfDay should be "morning", "afternoon", or "evening"
+- Budget allocations should use categories: content_boost, ad_campaigns, influencer_collab, tools_software, content_creation, analytics_insights, reserve
+- Budget amounts should sum to approximately the monthly budget
+- Only use platforms from the available list`;
+
+  const responseText = await callAI(systemPrompt, userPrompt, 4096);
+
+  try {
+    const parsed = JSON.parse(responseText);
+    return {
+      summary: parsed.summary || '',
+      platforms: Array.isArray(parsed.platforms) ? parsed.platforms : [],
+      posts: Array.isArray(parsed.posts) ? parsed.posts : [],
+      durationDays: parsed.durationDays || 30,
+      budgetAllocations: Array.isArray(parsed.budgetAllocations) ? parsed.budgetAllocations : [],
+    };
+  } catch {
+    throw new Error('Failed to parse marketing plan response');
+  }
+}
+
 // Compatibility functions - AI is now always configured server-side
 export function isAnyAIConfigured(): boolean {
   return true; // Server-side keys

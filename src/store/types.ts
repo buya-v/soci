@@ -16,6 +16,9 @@ import type {
   BudgetCategory,
   Language,
   Platform,
+  MarketingPlan,
+  PlannedPost,
+  PlanStatus,
 } from '@/types';
 
 // --- Store-specific types ---
@@ -177,6 +180,19 @@ export interface UISlice {
   setRecoveryMode: (active: boolean) => void;
 }
 
+export interface PlanSlice {
+  plans: MarketingPlan[];
+  activePlanId: string | null;
+  addPlan: (plan: MarketingPlan) => void;
+  updatePlan: (id: string, updates: Partial<MarketingPlan>) => void;
+  deletePlan: (id: string) => void;
+  setActivePlan: (id: string | null) => void;
+  updatePlannedPost: (planId: string, postId: string, updates: Partial<PlannedPost>) => void;
+  updatePlanStatus: (id: string, status: PlanStatus) => void;
+  addGeneratedPostId: (planId: string, postId: string) => void;
+  updateGenerationProgress: (planId: string, progress: number) => void;
+}
+
 // --- Composite type ---
 
 export type AppState = AuthSlice &
@@ -185,7 +201,8 @@ export type AppState = AuthSlice &
   MediaSlice &
   AutomationSlice &
   BudgetSlice &
-  UISlice;
+  UISlice &
+  PlanSlice;
 
 // --- Slice creator helper type ---
 

@@ -53,6 +53,7 @@ export interface Post {
   engagement?: PostEngagement;
   imageUrl?: string;
   trendId?: string;
+  planId?: string;
   language?: Language; // Per-post language override
 }
 
@@ -195,7 +196,7 @@ export interface GeneratedContent {
 }
 
 // Navigation
-export type ViewType = 'dashboard' | 'trends' | 'content' | 'templates' | 'hashtags' | 'media' | 'drafts' | 'published' | 'calendar' | 'video' | 'automation' | 'budget';
+export type ViewType = 'dashboard' | 'trends' | 'content' | 'templates' | 'hashtags' | 'media' | 'drafts' | 'published' | 'calendar' | 'video' | 'automation' | 'budget' | 'plans';
 
 // App state
 export interface AppState {
@@ -319,4 +320,57 @@ export interface BudgetRecommendation {
   recommendedPercentage: number;
   reason: string;
   expectedImpact: string;
+}
+
+// Marketing Plan types
+export type PlanStatus = 'draft' | 'generating' | 'review' | 'approved' | 'active' | 'completed' | 'failed';
+export type PlanGoal = 'brand_awareness' | 'lead_generation' | 'engagement' | 'traffic' | 'sales' | 'community';
+
+export interface PlannedPost {
+  id: string;
+  platform: Platform;
+  topic: string;
+  theme: string;
+  suggestedCaption: string;
+  suggestedHashtags: string[];
+  scheduledFor?: string;
+  order: number;
+  status: 'pending' | 'generated' | 'skipped';
+  generatedPostId?: string;
+}
+
+export interface PlanPlatformConfig {
+  platform: Platform;
+  postCount: number;
+  frequency: string;
+  themes: string[];
+}
+
+export interface PlanBudgetAllocation {
+  category: BudgetCategory;
+  amount: number;
+  rationale: string;
+}
+
+export interface MarketingPlan {
+  id: string;
+  brief: string;
+  goal?: PlanGoal;
+  status: PlanStatus;
+  postDestination: 'drafts' | 'scheduled';
+  summary: string;
+  platforms: PlanPlatformConfig[];
+  plannedPosts: PlannedPost[];
+  totalPostCount: number;
+  durationDays: number;
+  startDate: string;
+  budgetAllocations: PlanBudgetAllocation[];
+  totalBudget: number;
+  createdAt: string;
+  updatedAt: string;
+  approvedAt?: string;
+  completedAt?: string;
+  generationProgress: number;
+  generatedPostIds: string[];
+  error?: string;
 }

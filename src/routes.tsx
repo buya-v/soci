@@ -13,6 +13,7 @@ export const VIEW_TO_PATH: Record<ViewType, string> = {
   video: '/video',
   automation: '/automation',
   budget: '/budget',
+  plans: '/plans',
 };
 
 export const PATH_TO_VIEW: Record<string, ViewType> = Object.fromEntries(

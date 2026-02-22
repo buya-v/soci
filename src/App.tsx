@@ -31,6 +31,7 @@ const CalendarView = lazy(() => import('./components/calendar/CalendarView').the
 const VideoLab = lazy(() => import('./components/video/VideoLab').then(m => ({ default: m.VideoLab })));
 const AutomationHub = lazy(() => import('./components/automation/AutomationHub').then(m => ({ default: m.AutomationHub })));
 const BudgetManager = lazy(() => import('./components/budget/BudgetManager').then(m => ({ default: m.BudgetManager })));
+const MarketingPlanner = lazy(() => import('./components/plans/MarketingPlanner').then(m => ({ default: m.MarketingPlanner })));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -91,6 +92,7 @@ const viewNames: Record<ViewType, string> = {
   video: 'Video Lab',
   automation: 'Automation',
   budget: 'Budget',
+  plans: 'Plans',
 };
 
 function WrapView({ viewType, children }: { viewType: ViewType; children: React.ReactNode }) {
@@ -186,6 +188,7 @@ function AppContent() {
                   <Route path="/video" element={<WrapView viewType="video"><VideoLab /></WrapView>} />
                   <Route path="/automation" element={<WrapView viewType="automation"><AutomationHub /></WrapView>} />
                   <Route path="/budget" element={<WrapView viewType="budget"><BudgetManager /></WrapView>} />
+                  <Route path="/plans" element={<WrapView viewType="plans"><MarketingPlanner /></WrapView>} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </motion.div>

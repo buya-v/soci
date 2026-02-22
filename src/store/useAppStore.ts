@@ -10,6 +10,7 @@ import { createMediaSlice } from './slices/mediaSlice';
 import { createAutomationSlice } from './slices/automationSlice';
 import { createBudgetSlice } from './slices/budgetSlice';
 import { createUISlice } from './slices/uiSlice';
+import { createPlanSlice } from './slices/planSlice';
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -21,6 +22,7 @@ export const useAppStore = create<AppState>()(
       ...createAutomationSlice(...a),
       ...createBudgetSlice(...a),
       ...createUISlice(...a),
+      ...createPlanSlice(...a),
     }),
     {
       name: 'soci-storage-v2',
@@ -44,6 +46,8 @@ export const useAppStore = create<AppState>()(
         emergencyStopTriggeredAt: state.emergencyStopTriggeredAt,
         budgetConfig: state.budgetConfig,
         budgetSpends: state.budgetSpends,
+        plans: state.plans,
+        activePlanId: state.activePlanId,
       }),
     }
   )

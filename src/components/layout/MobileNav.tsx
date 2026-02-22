@@ -15,6 +15,7 @@ import {
   Hash,
   Image,
   Calendar,
+  ClipboardList,
 } from 'lucide-react';
 import { VIEW_TO_PATH } from '@/routes';
 import type { ViewType } from '@/types';
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
   { id: 'drafts', label: 'Queue', icon: FileText },
   { id: 'calendar', label: 'Calendar', icon: Calendar },
   { id: 'video', label: 'Video Lab', icon: Video },
+  { id: 'plans', label: 'Plans', icon: ClipboardList },
   { id: 'automation', label: 'Automation', icon: Settings },
 ];
 

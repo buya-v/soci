@@ -17,6 +17,7 @@ import {
   Wallet,
   LogOut,
   CheckCircle,
+  ClipboardList,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/ui/NotificationCenter';
@@ -48,6 +49,7 @@ const navItems: NavItem[] = [
   { id: 'calendar', label: 'Calendar', icon: Calendar },
   { id: 'video', label: 'Video Lab', icon: Video },
   { id: 'budget', label: 'Budget', icon: Wallet },
+  { id: 'plans', label: 'Plans', icon: ClipboardList },
   { id: 'automation', label: 'Automation', icon: Settings },
 ];
 
