@@ -32,6 +32,19 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/
+          retention-days: 7
+
+      - name: Health check - verify build output
+        run: |
+          test -f dist/index.html || (echo "Build output missing index.html" && exit 1)
+          echo "Build health check passed"
+
   deploy-preview:
     needs: build-and-test
     runs-on: ubuntu-latest
